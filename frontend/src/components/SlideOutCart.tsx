@@ -105,54 +105,48 @@ export default function SlideOutCart() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 space-y-12">
-          
-          {/* SUCCESS VIEW */}
           {checkoutStatus === 'success' ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-10">
                 <div className="w-24 h-24 rounded-full border border-black flex items-center justify-center mb-10 text-3xl font-light">✓</div>
                 <h2 className="text-4xl font-playfair mb-4 italic">Confirmed</h2>
                 <p className="text-sm text-gray-500 mb-12 leading-relaxed">
-                {paymentMethod === "Cash on Delivery" 
-                    ? "Your order has been placed. Please prepare the exact amount upon delivery."
-                    : "Your selection has been archived. You will receive a notification shortly."}
+                  {paymentMethod === "Cash on Delivery" 
+                      ? "Your order has been placed. Please prepare the exact amount upon delivery."
+                      : "Your selection has been archived. You will receive a notification shortly."}
                 </p>
                 <button 
-                onClick={() => {
-                    setCheckoutStatus('idle');
-                    setIsCartOpen(false);
-                }}
-                className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-widest font-bold"
+                  onClick={() => {
+                      setCheckoutStatus('idle');
+                      setIsCartOpen(false);
+                  }}
+                  className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-widest font-bold"
                 >
-                Return to Boutique
+                  Return to Boutique
                 </button>
             </div>
           ) : checkoutStatus === 'qr' ? (
-            /* QR VIEW */
             <div className="flex flex-col items-center justify-center py-10">
                 <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-8 font-bold">Pay via {paymentMethod}</p>
                 <div className="bg-black p-8 mb-8">
-                <div className="w-48 h-48 flex flex-wrap opacity-80">
-                    {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
-                </div>
+                  <div className="w-48 h-48 flex flex-wrap opacity-80">
+                      {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
+                  </div>
                 </div>
                 <p className="text-5xl font-playfair mb-4 italic">{qrCountdown}s</p>
                 <p className="text-xs text-gray-500 text-center uppercase tracking-widest leading-loose">Awaiting confirmation...<br/>Keep this window active.</p>
                 <button onClick={() => setCheckoutStatus('idle')} className="mt-10 text-[9px] uppercase tracking-widest border-b border-black">Cancel Payment</button>
             </div>
           ) : checkoutStatus === 'processing' ? (
-            /* PROCESSING VIEW */
             <div className="h-full flex flex-col items-center justify-center py-10">
                 <div className="w-12 h-12 border-2 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
                 <p className="text-[10px] uppercase tracking-[0.2em] font-bold">Processing Order...</p>
             </div>
           ) : cart.length === 0 ? (
-            /* EMPTY VIEW */
             <div className="h-full flex flex-col items-center justify-center text-center">
               <p className="text-gray-400 font-playfair italic text-lg mb-6">Your bag is empty.</p>
               <button onClick={() => setIsCartOpen(false)} className="text-[10px] uppercase tracking-widest font-bold border-b border-black pb-1">Start Exploring</button>
             </div>
           ) : (
-            /* MAIN CART + FORM VIEW */
             <>
               {/* Items List */}
               <div className="space-y-6">
@@ -249,7 +243,6 @@ export default function SlideOutCart() {
                   </div>
                 </div>
 
-                {/* Expanded Payment Methods */}
                 <div className="space-y-4">
                     <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Payment Method</p>
                     <div className="grid grid-cols-2 gap-2">
@@ -265,8 +258,8 @@ export default function SlideOutCart() {
                         ))}
                     </div>
                 </div>
-              </>
-            )
+              </div>
+            </>
           )}
         </div>
 

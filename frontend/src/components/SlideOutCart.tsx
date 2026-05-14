@@ -55,8 +55,6 @@ export default function SlideOutCart() {
       
       const processCheckout = async () => {
         try {
-          // In this implementation, we checkout each item in the cart
-          // Since the backend checkout creates an order for ONE product_id
           for (const item of cart) {
             await checkoutProduct(item.id, zone);
           }
@@ -154,43 +152,60 @@ export default function SlideOutCart() {
 
               {/* Checkout Form */}
               <div className="space-y-8 pt-10 border-t border-black/5">
-                <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
+                  {touched && !isFormValid && (
+                    <span className="text-[9px] text-red-500 uppercase font-bold tracking-tighter">Missing Info</span>
+                  )}
+                </div>
                 <div className="space-y-6">
                   <input 
                     type="text" placeholder="Full Name" value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-transparent border-b border-black/10 py-3 text-sm focus:border-black transition-colors outline-none"
+                    className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && fullName.trim().length < 3 ? 'border-red-400' : 'border-black/10'}`}
                   />
                   <input 
-                    type="tel" placeholder="Phone Number" value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-transparent border-b border-black/10 py-3 text-sm focus:border-black transition-colors outline-none"
+                    type="tel" placeholder="Phone Number (10 digits)" value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && phone.length < 10 ? 'border-red-400' : 'border-black/10'}`}
                   />
                   
                   <div className="grid grid-cols-2 gap-4">
                     <select 
                       value={address.province}
                       onChange={(e) => setAddress({...address, province: e.target.value, city: "", barangay: ""})}
-                      className="bg-transparent border-b border-black/10 py-3 text-sm outline-none"
+                      className={`bg-transparent border-b py-3 text-sm outline-none ${touched && !address.province ? 'border-red-400 text-red-400' : 'border-black/10'}`}
                     >
                       <option value="">Province</option>
                       {provincesList.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                     <select 
                       value={address.city}
+                      disabled={!address.province}
                       onChange={(e) => setAddress({...address, city: e.target.value, barangay: ""})}
-                      className="bg-transparent border-b border-black/10 py-3 text-sm outline-none"
+                      className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.city ? 'border-red-400 text-red-400' : 'border-black/10'}`}
                     >
                       <option value="">City</option>
                       {citiesList.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
 
-                  <input 
-                    type="text" placeholder="Street / House No." value={address.street}
-                    onChange={(e) => setAddress({...address, street: e.target.value})}
-                    className="w-full bg-transparent border-b border-black/10 py-3 text-sm focus:border-black transition-colors outline-none"
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <select 
+                      value={address.barangay}
+                      disabled={!address.city}
+                      onChange={(e) => setAddress({...address, barangay: e.target.value})}
+                      className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.barangay ? 'border-red-400 text-red-400' : 'border-black/10'}`}
+                    >
+                      <option value="">Barangay</option>
+                      {barangaysList.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <input 
+                      type="text" placeholder="House No. / Street" value={address.street}
+                      onChange={(e) => setAddress({...address, street: e.target.value})}
+                      className={`bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && address.street.length < 5 ? 'border-red-400' : 'border-black/10'}`}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -205,7 +220,7 @@ export default function SlideOutCart() {
                           <input type="radio" checked={zone === opt.z} onChange={() => setZone(opt.z)} className="accent-black" />
                           <span className="text-xs uppercase font-bold tracking-tight">{opt.l}</span>
                         </div>
-                        <span className="text-xs font-medium">${opt.p}</span>
+                        <span className="text-xs font-medium">₱{opt.p}</span>
                       </label>
                     ))}
                   </div>
@@ -219,14 +234,15 @@ export default function SlideOutCart() {
           <div className="p-8 bg-white border-t border-black/5">
             <div className="flex justify-between items-end mb-8">
               <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Subtotal</span>
-              <span className="text-2xl font-dm-sans font-medium">${(subtotal + shipping).toLocaleString()}</span>
+              <span className="text-2xl font-dm-sans font-medium">₱{(subtotal + shipping).toLocaleString()}</span>
             </div>
             <button 
               onClick={handleCheckoutClick}
-              disabled={!isFormValid}
-              className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-widest font-bold disabled:bg-gray-200 disabled:text-gray-400 transition-all hover:bg-gray-900"
+              className={`w-full py-5 text-[10px] uppercase tracking-widest font-bold transition-all ${
+                isFormValid ? "bg-black text-white hover:bg-gray-900" : "bg-gray-100 text-gray-400"
+              }`}
             >
-              {isFormValid ? "Pay Now" : "Complete Details"}
+              {isFormValid ? `Pay via ${paymentMethod}` : "Complete Details"}
             </button>
           </div>
         )}

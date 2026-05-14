@@ -71,9 +71,21 @@ export default function ProductPage({ productId }: { productId: string }) {
         price: product.price,
         image: product.images[0]
       });
+      setIsCartOpen(true);
     } catch (err: any) {
       alert(err.message || "Could not reserve this item.");
     }
+  };
+
+  const handleBuyNow = async () => {
+    if (!product || product.status !== "available") {
+        if (inCart) {
+            setIsCartOpen(true);
+        }
+        return;
+    }
+    await handleAddToCart();
+    setIsCartOpen(true);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-playfair uppercase tracking-widest animate-pulse">Archivé Boutique...</div>;
@@ -153,8 +165,8 @@ export default function ProductPage({ productId }: { productId: string }) {
               <p className="text-lg text-gray-500 font-playfair italic mb-10">{product.era}</p>
 
               <div className="flex items-baseline gap-6 mb-12">
-                <span className="text-4xl font-dm-sans font-medium">${product.price.toLocaleString()}</span>
-                <span className="text-sm text-gray-300 line-through font-light">SRP ${product.srp.toLocaleString()}</span>
+                <span className="text-4xl font-dm-sans font-medium">₱{product.price.toLocaleString()}</span>
+                <span className="text-sm text-gray-300 line-through font-light">SRP ₱{product.srp.toLocaleString()}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-10">
@@ -171,12 +183,20 @@ export default function ProductPage({ productId }: { productId: string }) {
               {/* CTAs */}
               <div className="space-y-4">
                 {product.status === "available" && (
-                  <button 
-                    onClick={handleAddToCart}
-                    className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-gray-900 transition-all active:scale-[0.98]"
-                  >
-                    Add to Reserve
-                  </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={handleAddToCart}
+                      className="bg-white border border-black text-black py-5 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-black hover:text-white transition-all active:scale-[0.98]"
+                    >
+                      Add to Cart
+                    </button>
+                    <button 
+                      onClick={handleBuyNow}
+                      className="bg-black text-white py-5 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-gray-900 transition-all active:scale-[0.98]"
+                    >
+                      Buy Now
+                    </button>
+                  </div>
                 )}
                 
                 {product.status === "reserved" && !inCart && (
@@ -190,7 +210,7 @@ export default function ProductPage({ productId }: { productId: string }) {
                     onClick={() => setIsCartOpen(true)}
                     className="w-full border border-black py-5 text-[10px] uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-4 hover:bg-black hover:text-white transition-all"
                   >
-                    <span>Item Reserved</span>
+                    <span>Item in Cart</span>
                     <span className="font-dm-sans font-normal text-amber-600">{formatTime(timerSecs)}</span>
                   </button>
                 )}

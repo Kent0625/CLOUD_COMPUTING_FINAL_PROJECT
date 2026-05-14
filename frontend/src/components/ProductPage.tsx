@@ -27,9 +27,12 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
     async function loadProduct() {
       try {
         setError(null);
+        setLoading(true);
+        console.log("Fetching products...");
         const products = await fetchProducts();
-        if (products.length > 0) {
-          // If id is provided in params, find that product, otherwise take the first
+        console.log("Products received:", products);
+        
+        if (products && Array.isArray(products) && products.length > 0) {
           const targetId = params?.id ? parseInt(params.id) : null;
           const initialProduct = targetId 
             ? products.find((p: any) => p.id === targetId) || products[0]
@@ -40,8 +43,11 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
              setInCart(true); 
              setTimerSecs(initialProduct.lock_ttl || TIMER_DURATION);
           }
+        } else {
+          setError("The boutique is currently empty. Check back later.");
         }
       } catch (err: any) {
+        console.error("Fetch error:", err);
         setError(err.message || "Something went wrong.");
       } finally {
         setLoading(false);

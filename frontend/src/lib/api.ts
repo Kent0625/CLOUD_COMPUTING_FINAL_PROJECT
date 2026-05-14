@@ -1,4 +1,6 @@
-const API_BASE_URL = "/api";
+const API_BASE_URL = "http://127.0.0.1:8000";
+// When deployed to Render, we will use the proxy or environment variable
+// process.env.NEXT_PUBLIC_API_URL || "/api"
 
 /**
  * Robust fetch wrapper to handle Render's "sleeping" instances 

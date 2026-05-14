@@ -1,15 +1,21 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use SQLite for local testing by default
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./archive_db.sqlite")
+# Get absolute path to the directory containing this file (backend/)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, "archive_db.sqlite")
+
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
 REDIS_URL = os.getenv("REDIS_URL", None)
 
 if DATABASE_URL.startswith("sqlite"):
+    # Fix for Windows paths in sqlite:///
+    if DATABASE_URL.startswith("sqlite:///C:"):
+        DATABASE_URL = DATABASE_URL.replace("sqlite:///C:", "sqlite:///c:")
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     engine = create_engine(DATABASE_URL)

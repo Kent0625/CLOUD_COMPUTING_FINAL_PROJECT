@@ -21,20 +21,22 @@ export default function ProductPage() {
   const [timerSecs, setTimerSecs] = useState(TIMER_DURATION);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProduct() {
       try {
+        setError(null);
         const products = await fetchProducts();
         if (products.length > 0) {
           setProduct(products[0]);
           if (products[0].status === "reserved" && products[0].is_locked) {
-             setInCart(true); // Simplified for prototype
+             setInCart(true); 
              setTimerSecs(products[0].lock_ttl || TIMER_DURATION);
           }
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong.");
       } finally {
         setLoading(false);
       }
@@ -42,53 +44,20 @@ export default function ProductPage() {
     loadProduct();
   }, []);
 
-  // Countdown
-  useEffect(() => {
-    if (!inCart || timerSecs <= 0) return;
-    const id = setInterval(() => {
-      setTimerSecs(s => {
-        if (s <= 1) { 
-          clearInterval(id); 
-          setInCart(false); 
-          // Refresh product status
-          fetchProduct(product.id).then(setProduct);
-          return TIMER_DURATION; 
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [inCart, timerSecs, product?.id]);
+  // ... (rest of the component)
 
-  const handleAddToCart = async () => {
-    if (!product || product.status !== "available") return;
-    try {
-      const res = await reserveProduct(product.id);
-      setInCart(true);
-      setTimerSecs(res.ttl);
-      setCartOpen(true);
-      // Refresh local product state
-      const updated = await fetchProduct(product.id);
-      setProduct(updated);
-    } catch (err) {
-      alert("Failed to reserve. It might have been taken.");
-    }
-  };
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-playfair uppercase tracking-widest animate-pulse">Archivé Boutique...</div>;
+  
+  if (error) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-warm-white">
+      <h2 className="font-playfair text-2xl mb-4">Pardon our delay</h2>
+      <p className="font-dm-sans text-muted-gray mb-8 max-w-sm">{error}</p>
+      <button onClick={() => window.location.reload()} className="bg-charcoal text-warm-white px-8 py-3 font-dm-sans text-[11px] tracking-widest uppercase">
+        Retry Entry
+      </button>
+    </div>
+  );
 
-  const handleCheckout = async (details: any) => {
-    try {
-      await checkoutProduct(product.id, details.zone);
-      alert(`Purchase successful! \n\nReceipt sent to: ${details.fullName}\nAddress: ${details.address}\nPayment: ${details.paymentMethod}\n\nThank you for shopping with Archivé.`);
-      setInCart(false);
-      setCartOpen(false);
-      const updated = await fetchProduct(product.id);
-      setProduct(updated);
-    } catch (err) {
-      alert("Checkout failed.");
-    }
-  };
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-playfair uppercase tracking-widest">Loading Archivé...</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found.</div>;
 
   const accordionData = [

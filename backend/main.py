@@ -3,16 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
-from . import models, database
-from .database import engine, redis_client, get_db
+import os
 
-models.Base.metadata.create_all(bind=engine)
+# Absolute imports for production runtime compatibility
+try:
+    from . import models, database
+    from .database import engine, redis_client, get_db
+except ImportError:
+    import models, database
+    from database import engine, redis_client, get_db
+
+# Only create tables if not using migrations (Alembic is recommended for production)
+if os.getenv("RENDER"):
+    models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Archivé Premium Thrift API")
 
+# Production CORS Policy
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,7 +40,7 @@ def get_current_item_status(item_id: int, db: Session):
     if not product:
         return None, None
         
-    # Lazy Evaluation: If DB says reserved but Redis lock is gone, it's available
+    # Lazy Evaluation
     if product.status == "reserved" and not lock_exists:
         product.status = "available"
         db.commit()
@@ -43,11 +55,13 @@ def list_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
     result = []
     for p in products:
-        # Apply lazy eval to all products in list
         updated_p, _ = get_current_item_status(p.id, db)
         p_dict = updated_p.__dict__.copy()
         p_dict.pop('_sa_instance_state', None)
-        p_dict['images'] = json.loads(p_dict['images'])
+        try:
+            p_dict['images'] = json.loads(p_dict['images'])
+        except:
+            pass # Already a list or empty
         result.append(p_dict)
     return result
 
@@ -59,7 +73,10 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     
     res = product.__dict__.copy()
     res.pop('_sa_instance_state', None)
-    res['images'] = json.loads(res['images'])
+    try:
+        res['images'] = json.loads(res['images'])
+    except:
+        pass
     res['is_locked'] = bool(locked)
     if locked:
         res['lock_ttl'] = redis_client.ttl(f"lock:product:{product_id}")
@@ -74,7 +91,6 @@ def reserve_product(product_id: int, db: Session = Depends(get_db)):
     if product.status != "available":
         raise HTTPException(status_code=400, detail="Item is already reserved or sold")
         
-    # Create Redis lock for 10 minutes (600 seconds)
     redis_client.set(f"lock:product:{product_id}", "reserved", ex=600)
     
     product.status = "reserved"
@@ -90,7 +106,9 @@ def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(
     if product.status != "reserved" or not locked:
         raise HTTPException(status_code=400, detail="Item must be reserved before checkout")
         
-    # In a real app, integrate PayMongo/Xendit here
+    # Placeholder for Payment Gateway Integration (PayMongo/Stripe)
+    # payment_result = paymongo.create_payment(...)
+    
     product.status = "sold"
     redis_client.delete(f"lock:product:{product_id}")
     

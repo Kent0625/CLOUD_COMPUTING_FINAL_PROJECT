@@ -62,10 +62,16 @@ export async function fetchProducts() {
 
 export async function fetchProduct(id: number) {
   try {
-    const res = await fetchWithRetry(`${API_BASE_URL}/products/${id}`);
-    if (!res.ok) throw new Error("This piece is currently unavailable.");
+    const url = `${API_BASE_URL}/products/${id}`;
+    console.log(`Fetching product from: ${url}`);
+    const res = await fetchWithRetry(url);
+    if (!res.ok) {
+      console.error(`Fetch failed for ${url}: Status ${res.status}`);
+      throw new Error("This piece is currently unavailable.");
+    }
     return res.json();
   } catch (err) {
+    console.error(`Error in fetchProduct for ID ${id}:`, err);
     throw err;
   }
 }

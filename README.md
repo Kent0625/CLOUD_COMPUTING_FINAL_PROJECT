@@ -148,10 +148,3 @@ Make the script executable:
 ```bash
 chmod +x /path/to/thrift_store/backend/run_etl.sh
 ```
-
-## Features Complete
-- [x] Full-Stack E-Commerce Application (Next.js & FastAPI)
-- [x] PostgreSQL Main Transactional Database Integration
-- [x] Separate Reporting Database for Analytics
-- [x] Automated ETL processes via Linux Cron jobs
-- [x] Admin Reporting Dashboard displaying sales, revenue, top products, and customer statistics.

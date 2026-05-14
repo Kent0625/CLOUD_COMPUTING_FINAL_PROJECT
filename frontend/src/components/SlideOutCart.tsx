@@ -90,53 +90,6 @@ export default function SlideOutCart() {
 
   if (!isCartOpen) return null;
 
-  if (checkoutStatus === 'qr') {
-    return (
-      <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-8 shadow-2xl">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-8">Pay via {paymentMethod}</p>
-        <div className="bg-black p-8 mb-8">
-           <div className="w-48 h-48 flex flex-wrap opacity-80">
-              {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
-           </div>
-        </div>
-        <p className="text-5xl font-playfair mb-4 italic">{qrCountdown}s</p>
-        <p className="text-xs text-gray-500 text-center uppercase tracking-widest leading-loose">Awaiting confirmation...<br/>Keep this window active.</p>
-      </div>
-    );
-  }
-
-  if (checkoutStatus === 'processing') {
-    return (
-      <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-8 shadow-2xl">
-        <div className="w-12 h-12 border-2 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
-        <p className="text-[10px] uppercase tracking-[0.2em] font-bold">Processing Order...</p>
-      </div>
-    );
-  }
-
-  if (checkoutStatus === 'success') {
-    return (
-      <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-12 shadow-2xl text-center">
-        <div className="w-24 h-24 rounded-full border border-black flex items-center justify-center mb-10 text-3xl font-light">✓</div>
-        <h2 className="text-4xl font-playfair mb-4 italic">Confirmed</h2>
-        <p className="text-sm text-gray-500 mb-12 leading-relaxed">
-          {paymentMethod === "Cash on Delivery" 
-            ? "Your order has been placed. Please prepare the exact amount upon delivery."
-            : "Your selection has been archived. You will receive a notification shortly."}
-        </p>
-        <button 
-          onClick={() => {
-            setCheckoutStatus('idle');
-            setIsCartOpen(false);
-          }}
-          className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-widest font-bold"
-        >
-          Return to Boutique
-        </button>
-      </div>
-    );
-  }
-
   const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
   const shipping = zone === "Zone 1" ? 120 : 180;
 
@@ -144,38 +97,84 @@ export default function SlideOutCart() {
     <>
       <div onClick={() => setIsCartOpen(false)} className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm transition-opacity" />
       <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#F5F4F0] flex flex-col shadow-2xl">
-        <div className="flex justify-between items-center p-8 border-b border-black/5">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center p-8 border-b border-black/5 bg-white/50 backdrop-blur-md sticky top-0 z-10">
           <h2 className="text-2xl font-playfair italic">Your Bag</h2>
           <button onClick={() => setIsCartOpen(false)} className="text-2xl font-light hover:rotate-90 transition-transform">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-10">
-          {cart.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-8 space-y-12">
+          
+          {/* SUCCESS VIEW */}
+          {checkoutStatus === 'success' ? (
+            <div className="h-full flex flex-col items-center justify-center text-center py-10">
+                <div className="w-24 h-24 rounded-full border border-black flex items-center justify-center mb-10 text-3xl font-light">✓</div>
+                <h2 className="text-4xl font-playfair mb-4 italic">Confirmed</h2>
+                <p className="text-sm text-gray-500 mb-12 leading-relaxed">
+                {paymentMethod === "Cash on Delivery" 
+                    ? "Your order has been placed. Please prepare the exact amount upon delivery."
+                    : "Your selection has been archived. You will receive a notification shortly."}
+                </p>
+                <button 
+                onClick={() => {
+                    setCheckoutStatus('idle');
+                    setIsCartOpen(false);
+                }}
+                className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-widest font-bold"
+                >
+                Return to Boutique
+                </button>
+            </div>
+          ) : checkoutStatus === 'qr' ? (
+            /* QR VIEW */
+            <div className="flex flex-col items-center justify-center py-10">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-8 font-bold">Pay via {paymentMethod}</p>
+                <div className="bg-black p-8 mb-8">
+                <div className="w-48 h-48 flex flex-wrap opacity-80">
+                    {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
+                </div>
+                </div>
+                <p className="text-5xl font-playfair mb-4 italic">{qrCountdown}s</p>
+                <p className="text-xs text-gray-500 text-center uppercase tracking-widest leading-loose">Awaiting confirmation...<br/>Keep this window active.</p>
+                <button onClick={() => setCheckoutStatus('idle')} className="mt-10 text-[9px] uppercase tracking-widest border-b border-black">Cancel Payment</button>
+            </div>
+          ) : checkoutStatus === 'processing' ? (
+            /* PROCESSING VIEW */
+            <div className="h-full flex flex-col items-center justify-center py-10">
+                <div className="w-12 h-12 border-2 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
+                <p className="text-[10px] uppercase tracking-[0.2em] font-bold">Processing Order...</p>
+            </div>
+          ) : cart.length === 0 ? (
+            /* EMPTY VIEW */
             <div className="h-full flex flex-col items-center justify-center text-center">
               <p className="text-gray-400 font-playfair italic text-lg mb-6">Your bag is empty.</p>
               <button onClick={() => setIsCartOpen(false)} className="text-[10px] uppercase tracking-widest font-bold border-b border-black pb-1">Start Exploring</button>
             </div>
           ) : (
+            /* MAIN CART + FORM VIEW */
             <>
-              {/* Items List - ALWAYS VISIBLE */}
+              {/* Items List */}
               <div className="space-y-6">
                 <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Selected Items ({cart.length})</p>
-                {cart.map(item => (
-                  <div key={item.id} className="flex gap-6 items-center group">
-                    <div className="w-20 aspect-[3/4] bg-gray-100 overflow-hidden">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                <div className="space-y-4">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex gap-6 items-center group bg-white p-4 border border-black/5">
+                      <div className="w-16 aspect-[3/4] bg-gray-100 overflow-hidden">
+                        <img src={item.image || "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=100"} alt={item.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-[11px] font-bold uppercase tracking-tight">{item.name}</h3>
+                        <p className="text-xs text-gray-400 font-medium">₱{item.price.toLocaleString()}</p>
+                        <button onClick={() => removeFromCart(item.id)} className="text-[9px] uppercase tracking-widest text-red-800 mt-2 hover:underline">Remove</button>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-bold uppercase tracking-tight">{item.name}</h3>
-                      <p className="text-xs text-gray-400 font-medium">₱{item.price.toLocaleString()}</p>
-                      <button onClick={() => removeFromCart(item.id)} className="text-[9px] uppercase tracking-widest text-red-800 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Remove</button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               {/* Checkout Form */}
-              <div className="space-y-8 pt-10 border-t border-black/5">
+              <div className="space-y-8 pt-4">
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
                   {touched && !isFormValid && (
@@ -266,12 +265,13 @@ export default function SlideOutCart() {
                         ))}
                     </div>
                 </div>
-              </div>
-            </>
+              </>
+            )
           )}
         </div>
 
-        {cart.length > 0 && (
+        {/* Footer with Subtotal */}
+        {cart.length > 0 && checkoutStatus === 'idle' && (
           <div className="p-8 bg-white border-t border-black/5 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
             <div className="flex justify-between items-end mb-8">
               <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Subtotal</span>

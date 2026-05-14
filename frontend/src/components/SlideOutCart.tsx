@@ -39,19 +39,33 @@ export default function SlideOutCart() {
   const barangaysList = (address.province && address.city) ? PH_DATA[address.province].cities[address.city] : [];
 
   const handleCheckoutClick = () => {
-    if (!isFormValid) {
-      setTouched(true);
-      return;
+    setTouched(true);
+    if (!isFormValid) return;
+    
+    if (paymentMethod === "Cash on Delivery") {
+        setCheckoutStatus('processing');
+        setTimeout(async () => {
+            try {
+                for (const item of cart) {
+                    await checkoutProduct(item.id, zone);
+                }
+                setCheckoutStatus('success');
+                clearCart();
+            } catch (err) {
+                alert("Order failed.");
+                setCheckoutStatus('idle');
+            }
+        }, 1500);
+    } else {
+        setCheckoutStatus('qr');
+        setQrCountdown(6);
     }
-    setCheckoutStatus('qr');
-    setQrCountdown(6);
   };
 
   useEffect(() => {
     if (checkoutStatus !== 'qr') return;
     if (qrCountdown === 0) {
       setCheckoutStatus('processing');
-      const fullAddress = `${address.street}, Brgy. ${address.barangay}, ${address.city}, ${address.province}`;
       
       const processCheckout = async () => {
         try {
@@ -72,14 +86,14 @@ export default function SlideOutCart() {
     }
     const id = setInterval(() => setQrCountdown(c => c - 1), 1000);
     return () => clearInterval(id);
-  }, [checkoutStatus, qrCountdown, cart, zone, address, clearCart]);
+  }, [checkoutStatus, qrCountdown, cart, zone, clearCart]);
 
   if (!isCartOpen) return null;
 
   if (checkoutStatus === 'qr') {
     return (
       <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-8 shadow-2xl">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-8">Scan to Pay via {paymentMethod}</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-8">Pay via {paymentMethod}</p>
         <div className="bg-black p-8 mb-8">
            <div className="w-48 h-48 flex flex-wrap opacity-80">
               {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
@@ -91,15 +105,24 @@ export default function SlideOutCart() {
     );
   }
 
+  if (checkoutStatus === 'processing') {
+    return (
+      <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-8 shadow-2xl">
+        <div className="w-12 h-12 border-2 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
+        <p className="text-[10px] uppercase tracking-[0.2em] font-bold">Processing Order...</p>
+      </div>
+    );
+  }
+
   if (checkoutStatus === 'success') {
     return (
       <div className="fixed inset-y-0 right-0 z-[100] w-full max-w-md bg-white flex flex-col items-center justify-center p-12 shadow-2xl text-center">
-        <div className="w-24 h-24 rounded-full border border-black flex items-center justify-center mb-10">
-          <span className="text-4xl">✓</span>
-        </div>
+        <div className="w-24 h-24 rounded-full border border-black flex items-center justify-center mb-10 text-3xl font-light">✓</div>
         <h2 className="text-4xl font-playfair mb-4 italic">Confirmed</h2>
         <p className="text-sm text-gray-500 mb-12 leading-relaxed">
-          Your selection has been archived. You will receive a notification shortly.
+          {paymentMethod === "Cash on Delivery" 
+            ? "Your order has been placed. Please prepare the exact amount upon delivery."
+            : "Your selection has been archived. You will receive a notification shortly."}
         </p>
         <button 
           onClick={() => {
@@ -134,8 +157,9 @@ export default function SlideOutCart() {
             </div>
           ) : (
             <>
-              {/* Items */}
+              {/* Items List - ALWAYS VISIBLE */}
               <div className="space-y-6">
+                <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Selected Items ({cart.length})</p>
                 {cart.map(item => (
                   <div key={item.id} className="flex gap-6 items-center group">
                     <div className="w-20 aspect-[3/4] bg-gray-100 overflow-hidden">
@@ -143,7 +167,7 @@ export default function SlideOutCart() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-bold uppercase tracking-tight">{item.name}</h3>
-                      <p className="text-xs text-gray-400 font-medium">${item.price.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400 font-medium">₱{item.price.toLocaleString()}</p>
                       <button onClick={() => removeFromCart(item.id)} className="text-[9px] uppercase tracking-widest text-red-800 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Remove</button>
                     </div>
                   </div>
@@ -155,7 +179,7 @@ export default function SlideOutCart() {
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
                   {touched && !isFormValid && (
-                    <span className="text-[9px] text-red-500 uppercase font-bold tracking-tighter">Missing Info</span>
+                    <span className="text-[9px] text-red-500 uppercase font-bold tracking-tighter">Required Info</span>
                   )}
                 </div>
                 <div className="space-y-6">
@@ -225,13 +249,30 @@ export default function SlideOutCart() {
                     ))}
                   </div>
                 </div>
+
+                {/* Expanded Payment Methods */}
+                <div className="space-y-4">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Payment Method</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {["GCash", "Online Payment", "Cash on Delivery", "Bank Transfer"].map(m => (
+                            <button 
+                                key={m} 
+                                type="button"
+                                onClick={() => setPaymentMethod(m)}
+                                className={`text-[10px] uppercase tracking-tight py-3 border rounded-sm transition-all font-bold ${paymentMethod === m ? 'border-black bg-black text-white' : 'border-black/10 text-gray-500 hover:border-black/30'}`}
+                            >
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+                </div>
               </div>
             </>
           )}
         </div>
 
         {cart.length > 0 && (
-          <div className="p-8 bg-white border-t border-black/5">
+          <div className="p-8 bg-white border-t border-black/5 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
             <div className="flex justify-between items-end mb-8">
               <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Subtotal</span>
               <span className="text-2xl font-dm-sans font-medium">₱{(subtotal + shipping).toLocaleString()}</span>
@@ -242,7 +283,7 @@ export default function SlideOutCart() {
                 isFormValid ? "bg-black text-white hover:bg-gray-900" : "bg-gray-100 text-gray-400"
               }`}
             >
-              {isFormValid ? `Pay via ${paymentMethod}` : "Complete Details"}
+              {isFormValid ? (paymentMethod === "Cash on Delivery" ? "Place Order" : `Pay via ${paymentMethod}`) : "Complete Details"}
             </button>
           </div>
         )}

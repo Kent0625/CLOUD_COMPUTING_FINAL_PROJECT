@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { PH_DATA } from "@/lib/ph-data";
 
 const TIMER_DURATION = 600;
@@ -50,6 +50,11 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
   const [street, setStreet] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   
+  // Payment States: idle | qr | processing | success
+  const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'qr' | 'processing' | 'success'>('idle');
+  const [qrCountdown, setQrCountdown] = useState(6);
+  const [touched, setTouched] = useState({ fullName: false, phone: false, street: false });
+
   // Internal countdown for real-time display
   const [internalTimer, setInternalTimer] = useState(timerSeconds);
 
@@ -64,11 +69,6 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
     }, 1000);
     return () => clearInterval(id);
   }, [isOpen, internalTimer]);
-  
-  // Payment States: idle | qr | processing | success
-  const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'qr' | 'processing' | 'success'>('idle');
-  const [qrCountdown, setQrCountdown] = useState(6);
-  const [touched, setTouched] = useState({ fullName: false, phone: false, street: false });
 
   const errors = {
     fullName: touched.fullName && fullName.trim().length < 3 ? "Name too short" : null,
@@ -76,8 +76,10 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
     address: (province && city && barangay && street.length >= 5) ? null : "Complete your address",
   };
 
-  const isFormValid = !errors.fullName && !errors.phone && !errors.address && 
-                      fullName.trim() !== "" && province !== "" && city !== "" && barangay !== "";
+  const isFormValid = useMemo(() => 
+    !errors.fullName && !errors.phone && 
+    fullName.trim() !== "" && province !== "" && city !== "" && barangay !== "" && street.length >= 5
+  , [errors, fullName, province, city, barangay, street]);
 
   // Data Selectors
   const provincesList = Object.keys(PH_DATA);
@@ -116,10 +118,10 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
       <div className={`fixed top-0 right-0 bottom-0 z-[205] w-[min(520px,94vw)] bg-warm-white flex flex-col items-center justify-center p-8 shadow-[-20px_0_60px_rgba(0,0,0,0.2)]`}>
         <p className="font-dm-sans text-[10px] tracking-[0.2em] text-muted-gray uppercase mb-8 text-center">Scan to Pay via {paymentMethod}</p>
         <div className="bg-white p-6 border border-[#E0DED8] mb-8 shadow-sm">
-          {/* Mock QR Code Animation */}
+          {/* Mock QR Code Animation - Static pattern to avoid hydration mismatch */}
           <div className="w-48 h-48 bg-charcoal flex flex-col items-center justify-center text-warm-white text-[9px] text-center p-6 space-y-4">
              <div className="w-full h-full border-[1px] border-warm-white/20 flex flex-wrap opacity-40">
-                {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${Math.random() > 0.5 ? 'bg-white' : 'bg-transparent'}`} />)}
+                {[...Array(64)].map((_, i) => <div key={i} className={`w-[12.5%] h-[12.5%] ${(i % 3 === 0 || i % 7 === 0) ? 'bg-white' : 'bg-transparent'}`} />)}
              </div>
              <p className="tracking-widest uppercase font-light letter-spacing-[0.2em]">[ ARCHIVÉ SECURE ]</p>
           </div>
@@ -154,8 +156,7 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
     );
   }
 
-  const pct = (timerSeconds / TIMER_DURATION) * 100;
-  const urgent = timerSeconds < 120;
+  const urgent = internalTimer < 120;
 
   return (
     <>
@@ -345,7 +346,7 @@ export default function SlideOutCart({ isOpen, onClose, product, timerSeconds, o
               'bg-charcoal text-warm-white hover:bg-accent-navy'
             }`}
           >
-            {isFormValid ? `Pay via ${paymentMethod}` : 'Complete Address & Phone'}
+            {isFormValid ? `Pay via ${paymentMethod}` : 'Complete Details to Pay'}
           </button>
           <p className="font-dm-sans text-[10px] text-[#B0ADA8] text-center mt-3 tracking-tight">
             Encrypted Transaction · Powered by PayMongo

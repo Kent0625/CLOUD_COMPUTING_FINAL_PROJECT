@@ -26,8 +26,10 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm run start
     envVars:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://${archive-backend.host}
+      - key: BACKEND_URL # Internal URL used by relative proxy
+        fromService:
+          name: archive-backend
+          property: host
 
   - type: redis
     name: archive-redis

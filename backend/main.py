@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Absolute imports for production runtime compatibility
 try:
@@ -13,18 +17,22 @@ except ImportError:
     import models, database
     from database import engine, redis_client, get_db
 
-# Only create tables if not using migrations (Alembic is recommended for production)
-if os.getenv("RENDER"):
-    models.Base.metadata.create_all(bind=engine)
+# Create tables on startup (Safe/Idempotent)
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Archivé Premium Thrift API")
 
 # Production CORS Policy
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+origins = [FRONTEND_URL]
+
+# Allow Render preview URLs
+if os.getenv("RENDER"):
+    origins.append("https://*.onrender.com")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,9 +67,10 @@ def list_products(db: Session = Depends(get_db)):
         p_dict = updated_p.__dict__.copy()
         p_dict.pop('_sa_instance_state', None)
         try:
-            p_dict['images'] = json.loads(p_dict['images'])
+            if isinstance(p_dict['images'], str):
+                p_dict['images'] = json.loads(p_dict['images'])
         except:
-            pass # Already a list or empty
+            pass 
         result.append(p_dict)
     return result
 
@@ -74,7 +83,8 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     res = product.__dict__.copy()
     res.pop('_sa_instance_state', None)
     try:
-        res['images'] = json.loads(res['images'])
+        if isinstance(res['images'], str):
+            res['images'] = json.loads(res['images'])
     except:
         pass
     res['is_locked'] = bool(locked)
@@ -106,9 +116,6 @@ def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(
     if product.status != "reserved" or not locked:
         raise HTTPException(status_code=400, detail="Item must be reserved before checkout")
         
-    # Placeholder for Payment Gateway Integration (PayMongo/Stripe)
-    # payment_result = paymongo.create_payment(...)
-    
     product.status = "sold"
     redis_client.delete(f"lock:product:{product_id}")
     

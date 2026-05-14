@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Navbar from "./Navbar";
-import SlideOutCart from "./SlideOutCart";
+import SlideOutCart, { CheckoutDetails } from "./SlideOutCart";
 import { fetchProducts, reserveProduct, checkoutProduct, fetchProduct } from "@/lib/api";
 
 const TIMER_DURATION = 600;
@@ -13,7 +13,7 @@ function formatTime(s: number) {
   return `${m}:${sec}`;
 }
 
-export default function ProductPage() {
+export default function ProductPage({ params }: { params?: { id: string } }) {
   const [product, setProduct] = useState<any>(null);
   const [activeImg, setActiveImg] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
@@ -29,10 +29,16 @@ export default function ProductPage() {
         setError(null);
         const products = await fetchProducts();
         if (products.length > 0) {
-          setProduct(products[0]);
-          if (products[0].status === "reserved" && products[0].is_locked) {
+          // If id is provided in params, find that product, otherwise take the first
+          const targetId = params?.id ? parseInt(params.id) : null;
+          const initialProduct = targetId 
+            ? products.find((p: any) => p.id === targetId) || products[0]
+            : products[0];
+          
+          setProduct(initialProduct);
+          if (initialProduct.status === "reserved" && initialProduct.is_locked) {
              setInCart(true); 
-             setTimerSecs(products[0].lock_ttl || TIMER_DURATION);
+             setTimerSecs(initialProduct.lock_ttl || TIMER_DURATION);
           }
         }
       } catch (err: any) {
@@ -42,9 +48,53 @@ export default function ProductPage() {
       }
     }
     loadProduct();
-  }, []);
+  }, [params?.id]);
 
-  // ... (rest of the component)
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (!inCart || timerSecs <= 0) return;
+    const id = setInterval(() => {
+      setTimerSecs(s => {
+        if (s <= 1) { 
+          clearInterval(id); 
+          setInCart(false); 
+          fetchProduct(product.id).then(setProduct);
+          return TIMER_DURATION; 
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [inCart, timerSecs, product?.id]);
+
+  const handleAddToCart = async () => {
+    if (!product || product.status !== "available") return;
+    try {
+      await reserveProduct(product.id);
+      const updated = await fetchProduct(product.id);
+      setProduct(updated);
+      setInCart(true);
+      setTimerSecs(updated.lock_ttl || TIMER_DURATION);
+      setCartOpen(true);
+    } catch (err: any) {
+      alert(err.message || "Could not reserve this item.");
+    }
+  };
+
+  const handleCheckout = async (details: CheckoutDetails) => {
+    if (!product) return;
+    try {
+      await checkoutProduct(product.id, details.zone);
+      alert(`Purchase successful! \n\nReceipt sent to: ${details.fullName}\nAddress: ${details.address}\nPayment: ${details.paymentMethod}\n\nThank you for shopping with Archivé.`);
+      setInCart(false);
+      setCartOpen(false);
+      const updated = await fetchProduct(product.id);
+      setProduct(updated);
+    } catch (err) {
+      console.error("Checkout error:", err);
+      alert("Checkout failed.");
+    }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-playfair uppercase tracking-widest animate-pulse">Archivé Boutique...</div>;
   

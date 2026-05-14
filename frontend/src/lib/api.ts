@@ -1,11 +1,11 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = "/api";
 
 /**
  * Robust fetch wrapper to handle Render's "sleeping" instances 
  * and network timeouts common in production.
  */
 async function fetchWithTimeout(resource: string, options: any = {}) {
-  const { timeout = 8000 } = options;
+  const { timeout = 12000 } = options; // Increased to 12s for cold starts
   
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -24,15 +24,32 @@ async function fetchWithTimeout(resource: string, options: any = {}) {
   } catch (error: any) {
     clearTimeout(id);
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out. The server might be waking up.');
+      throw new Error('Our boutique is taking a moment to open. Please retry.');
     }
     throw error;
   }
 }
 
+/**
+ * Fetch with retry logic for production stability
+ */
+async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetchWithTimeout(url);
+      if (res.ok) return res;
+      if (res.status !== 503 && res.status !== 504) break; // Don't retry on user errors
+    } catch (e) {
+      if (i === retries) throw e;
+    }
+    await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+  }
+  return fetch(url); // Final attempt
+}
+
 export async function fetchProducts() {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/products`);
+    const res = await fetchWithRetry(`${API_BASE_URL}/products`);
     if (!res.ok) throw new Error("Our boutique is currently resting. Please refresh in a moment.");
     return res.json();
   } catch (err) {
@@ -43,7 +60,7 @@ export async function fetchProducts() {
 
 export async function fetchProduct(id: number) {
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/products/${id}`);
+    const res = await fetchWithRetry(`${API_BASE_URL}/products/${id}`);
     if (!res.ok) throw new Error("This piece is currently unavailable.");
     return res.json();
   } catch (err) {

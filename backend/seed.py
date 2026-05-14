@@ -1,7 +1,11 @@
-from sqlalchemy.orm import Session
+import sys, os
 import json
-from . import models, database
-from .database import SessionLocal, engine
+
+# Fix import path for standalone execution
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import models, database
+from database import SessionLocal, engine
 
 def seed():
     models.Base.metadata.create_all(bind=engine)
@@ -26,11 +30,10 @@ def seed():
             "images": json.dumps([
                 "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=900&q=85",
                 "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=900&q=85",
-                "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85",
             ]),
-            "fit_details": "A structured, slightly boxy silhouette. The hem falls just below the knee. Shoulders sit true-to-size with a natural, unpadded line. Best worn over a light knit or tailored trouser.",
-            "fabric_details": "80% Virgin Wool, 20% Nylon. Shell is substantial—around 400gsm. Hand-feel is smooth with a slight pebble texture. Fully lined in a silky viscose blend.",
-            "condition_details": "Rated 8/10. Light pilling on the inner sleeve cuffs, visible only upon close inspection. A faint 1cm horizontal crease on the left lapel that does not affect drape. No missing buttons. All seams intact. Dry-cleaned before listing.",
+            "fit_details": "Structured silhouette, falls below the knee.",
+            "fabric_details": "80% Virgin Wool, 20% Nylon.",
+            "condition_details": "Rated 8/10. Light pilling on cuffs.",
         },
         {
             "archive_id": "ARC-0042",
@@ -45,9 +48,43 @@ def seed():
             "images": json.dumps([
                 "https://images.unsplash.com/photo-1576871333020-033bc699b685?w=900&q=85",
             ]),
-            "fit_details": "Classic trucker fit. Hits at the hip. Roomy through the chest and arms.",
-            "fabric_details": "100% Cotton heavy denim. No stretch.",
-            "condition_details": "Perfectly distressed. Some fraying at the collar adds to the character.",
+            "fit_details": "Classic trucker fit. Hits at the hip.",
+            "fabric_details": "100% Cotton heavy denim.",
+            "condition_details": "Perfectly distressed character.",
+        },
+        {
+            "archive_id": "ARC-0043",
+            "name": "Silk Floral Blouse",
+            "era": "Circa 1970s",
+            "brand": "VALENTINO ARCHIVE",
+            "srp": 8500.0,
+            "price": 3200.0,
+            "size": "S / EU 36",
+            "color": "Emerald",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1548624149-f9b1859aa7d0?w=900&q=85",
+            ]),
+            "fit_details": "Flowy, bohemian silhouette with puffed sleeves.",
+            "fabric_details": "100% Mulberry Silk.",
+            "condition_details": "Pristine condition. No visible flaws.",
+        },
+        {
+            "archive_id": "ARC-0044",
+            "name": "Leather Biker Boots",
+            "era": "Circa 2005",
+            "brand": "DR. MARTENS VINTAGE",
+            "srp": 9200.0,
+            "price": 4100.0,
+            "size": "9 US / 42 EU",
+            "color": "Cherry Red",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=85",
+            ]),
+            "fit_details": "True to size. High ankle support.",
+            "fabric_details": "Full grain cowhide leather.",
+            "condition_details": "Well broken in. Minor scuffs on toe box.",
         }
     ]
 
@@ -56,7 +93,7 @@ def seed():
         db.add(p)
     
     db.commit()
-    print("Database seeded successfully.")
+    print(f"Database seeded successfully with {len(products)} products.")
 
 if __name__ == "__main__":
     seed()

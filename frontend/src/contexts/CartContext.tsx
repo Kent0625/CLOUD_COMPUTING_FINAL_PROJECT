@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 interface CartItem {
   id: number;
@@ -23,52 +23,48 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const isInitialMount = useRef(true);
 
-  // Load cart from local storage on mount
+  // 1. Initial Load from LocalStorage (ONLY ONCE)
   useEffect(() => {
     const savedCart = localStorage.getItem("thrift_cart");
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart);
-        console.log("Loaded cart from storage:", parsed);
-        setCart(parsed);
+        if (Array.isArray(parsed)) {
+          setCart(parsed);
+        }
       } catch (e) {
-        console.error("Failed to parse cart", e);
+        console.error("Failed to parse cart from storage", e);
       }
     }
-    setIsLoaded(true);
   }, []);
 
-  // Save cart to local storage on change
+  // 2. Save to LocalStorage whenever cart changes
   useEffect(() => {
-    if (isLoaded) {
-      console.log("Saving cart to storage:", cart);
-      localStorage.setItem("thrift_cart", JSON.stringify(cart));
+    // Skip the very first run to prevent overwriting stored data with empty state
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
-  }, [cart, isLoaded]);
+    localStorage.setItem("thrift_cart", JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (product: CartItem) => {
-    console.log("Adding to cart:", product);
     setCart((prev) => {
-      if (prev.find((item) => item.id === product.id)) {
-        console.log("Item already in cart, skipping.");
-        return prev;
-      }
-      const newCart = [...prev, product];
-      console.log("New cart state:", newCart);
-      return newCart;
+      // Prevent duplicates
+      if (prev.some((item) => item.id === product.id)) return prev;
+      return [...prev, product];
     });
-    setIsCartOpen(true);
+    // Give a small delay to ensure state update before opening
+    setTimeout(() => setIsCartOpen(true), 100);
   };
 
   const removeFromCart = (id: number) => {
-    console.log("Removing from cart ID:", id);
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
   const clearCart = () => {
-    console.log("Clearing cart");
     setCart([]);
   };
 

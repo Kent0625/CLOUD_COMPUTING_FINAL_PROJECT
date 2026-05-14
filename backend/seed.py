@@ -48,7 +48,8 @@ def seed():
             "color": "Indigo",
             "status": "available",
             "images": json.dumps([
-                "https://images.unsplash.com/photo-1576871333020-033bc699b685?w=900&q=85",
+                "https://images.unsplash.com/photo-1544441893-675973e31985?w=900&q=85",
+                "https://images.unsplash.com/photo-1620052481128-44966603a1da?w=900&q=85",
             ]),
             "fit_details": "Classic trucker fit. Hits at the hip.",
             "fabric_details": "100% Cotton heavy denim.",
@@ -65,7 +66,8 @@ def seed():
             "color": "Emerald",
             "status": "available",
             "images": json.dumps([
-                "https://images.unsplash.com/photo-1548624149-f9b1859aa7d0?w=900&q=85",
+                "https://images.unsplash.com/photo-1605763240000-7e93b172d754?w=900&q=85",
+                "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=900&q=85",
             ]),
             "fit_details": "Flowy, bohemian silhouette with puffed sleeves.",
             "fabric_details": "100% Mulberry Silk.",
@@ -83,6 +85,7 @@ def seed():
             "status": "available",
             "images": json.dumps([
                 "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=900&q=85",
+                "https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=900&q=85",
             ]),
             "fit_details": "True to size. High ankle support.",
             "fabric_details": "Full grain cowhide leather.",
@@ -116,6 +119,7 @@ def seed():
             "color": "Navy",
             "status": "available",
             "images": json.dumps([
+                "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=900&q=85",
                 "https://images.unsplash.com/photo-1574180563860-26b282c0dc14?w=900&q=85",
             ]),
             "fit_details": "Slim fit, ribbed collar.",
@@ -134,6 +138,7 @@ def seed():
             "status": "available",
             "images": json.dumps([
                 "https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=900&q=85",
+                "https://images.unsplash.com/photo-1605733513597-a8f8d410fe3c?w=900&q=85",
             ]),
             "fit_details": "Narrow fit, 30mm heel.",
             "fabric_details": "Smooth calfskin leather.",

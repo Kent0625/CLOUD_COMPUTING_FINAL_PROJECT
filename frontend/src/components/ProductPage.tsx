@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import Navbar from "./Navbar";
-import SlideOutCart, { CheckoutDetails } from "./SlideOutCart";
-import { fetchProducts, reserveProduct, checkoutProduct, fetchProduct } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { fetchProduct, reserveProduct } from "@/lib/api";
+import { useCart } from "@/contexts/CartContext";
 
 const TIMER_DURATION = 600;
 
@@ -13,38 +12,26 @@ function formatTime(s: number) {
   return `${m}:${sec}`;
 }
 
-export default function ProductPage({ params }: { params?: { id: string } }) {
+export default function ProductPage({ productId }: { productId: string }) {
   const [product, setProduct] = useState<any>(null);
   const [activeImg, setActiveImg] = useState(0);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [inCart, setInCart] = useState(false);
   const [timerSecs, setTimerSecs] = useState(TIMER_DURATION);
-  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [openAccordion, setOpenAccordion] = useState<string | null>("fit");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const { addToCart, setIsCartOpen, cart } = useCart();
+  const inCart = cart.some(item => item.id === product?.id);
 
   useEffect(() => {
     async function loadProduct() {
       try {
         setError(null);
         setLoading(true);
-        console.log("Fetching products...");
-        const products = await fetchProducts();
-        console.log("Products received:", products);
-        
-        if (products && Array.isArray(products) && products.length > 0) {
-          const targetId = params?.id ? parseInt(params.id) : null;
-          const initialProduct = targetId 
-            ? products.find((p: any) => p.id === targetId) || products[0]
-            : products[0];
-          
-          setProduct(initialProduct);
-          if (initialProduct.status === "reserved" && initialProduct.is_locked) {
-             setInCart(true); 
-             setTimerSecs(initialProduct.lock_ttl || TIMER_DURATION);
-          }
-        } else {
-          setError("The boutique is currently empty. Check back later.");
+        const data = await fetchProduct(parseInt(productId));
+        setProduct(data);
+        if (data.status === "reserved" && data.is_locked) {
+          setTimerSecs(data.lock_ttl || TIMER_DURATION);
         }
       } catch (err: any) {
         console.error("Fetch error:", err);
@@ -54,7 +41,7 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
       }
     }
     loadProduct();
-  }, [params?.id]);
+  }, [productId]);
 
   // Countdown Timer Effect
   useEffect(() => {
@@ -63,7 +50,6 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
       setTimerSecs(s => {
         if (s <= 1) { 
           clearInterval(id); 
-          setInCart(false); 
           fetchProduct(product.id).then(setProduct);
           return TIMER_DURATION; 
         }
@@ -79,36 +65,24 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
       await reserveProduct(product.id);
       const updated = await fetchProduct(product.id);
       setProduct(updated);
-      setInCart(true);
-      setTimerSecs(updated.lock_ttl || TIMER_DURATION);
-      setCartOpen(true);
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.images[0]
+      });
     } catch (err: any) {
       alert(err.message || "Could not reserve this item.");
-    }
-  };
-
-  const handleCheckout = async (details: CheckoutDetails) => {
-    if (!product) return;
-    try {
-      await checkoutProduct(product.id, details.zone);
-      alert(`Purchase successful! \n\nReceipt sent to: ${details.fullName}\nAddress: ${details.address}\nPayment: ${details.paymentMethod}\n\nThank you for shopping with Archivé.`);
-      setInCart(false);
-      setCartOpen(false);
-      const updated = await fetchProduct(product.id);
-      setProduct(updated);
-    } catch (err) {
-      console.error("Checkout error:", err);
-      alert("Checkout failed.");
     }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-playfair uppercase tracking-widest animate-pulse">Archivé Boutique...</div>;
   
   if (error) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-warm-white">
-      <h2 className="font-playfair text-2xl mb-4">Pardon our delay</h2>
-      <p className="font-dm-sans text-muted-gray mb-8 max-w-sm">{error}</p>
-      <button onClick={() => window.location.reload()} className="bg-charcoal text-warm-white px-8 py-3 font-dm-sans text-[11px] tracking-widest uppercase">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-[#F5F4F0]">
+      <h2 className="font-playfair text-2xl mb-4 italic">Pardon our delay</h2>
+      <p className="font-dm-sans text-gray-500 mb-8 max-w-sm">{error}</p>
+      <button onClick={() => window.location.reload()} className="border border-black px-8 py-3 font-dm-sans text-[11px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
         Retry Entry
       </button>
     </div>
@@ -123,182 +97,130 @@ export default function ProductPage({ params }: { params?: { id: string } }) {
   ];
 
   return (
-    <div className="bg-warm-white min-h-screen">
-      <Navbar onCartOpen={() => setCartOpen(true)} cartCount={inCart ? 1 : 0} />
-
-      {/* Breadcrumb */}
-      <div className="pt-[88px] px-12 flex gap-2.5 items-center">
-        {["Collections", "Outerwear", product.name].map((crumb, i, arr) => (
-          <span key={crumb} className="flex items-center gap-2.5">
-            <span className={`font-dm-sans text-[10px] tracking-[0.14em] uppercase ${i === arr.length - 1 ? 'text-charcoal' : 'text-[#B0ADA8] cursor-pointer'}`}>
-              {crumb}
+    <div className="bg-[#F5F4F0] min-h-screen pt-24 pb-20">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Breadcrumb */}
+        <div className="mb-12 flex gap-3 items-center">
+          {["Collection", product.brand, product.name].map((crumb, i, arr) => (
+            <span key={crumb} className="flex items-center gap-3">
+              <span className={`text-[9px] uppercase tracking-[0.2em] font-semibold ${i === arr.length - 1 ? 'text-black' : 'text-gray-400'}`}>
+                {crumb}
+              </span>
+              {i < arr.length - 1 && <span className="text-gray-300">/</span>}
             </span>
-            {i < arr.length - 1 && <span className="text-[#D0CEC8] text-[10px]">·</span>}
-          </span>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Product Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 max-w-[1400px] mx-auto px-12 py-8 pb-20">
-
-        {/* Left: Gallery */}
-        <div className="md:pr-12">
-          <div className="flex flex-col gap-0">
-            <div className="w-full aspect-[3/4] overflow-hidden bg-[#ECEAE4]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          {/* Left: Gallery */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="aspect-[3/4] overflow-hidden bg-gray-100">
               <img 
                 src={product.images[activeImg]} 
                 alt={product.name} 
-                className="w-full h-full object-cover transition-opacity duration-400" 
+                className="w-full h-full object-cover transition-opacity duration-500" 
               />
             </div>
-            <div className="flex gap-1 mt-1">
+            <div className="grid grid-cols-4 gap-4">
               {product.images.map((img: string, i: number) => (
                 <div 
                   key={i} 
                   onClick={() => setActiveImg(i)} 
-                  className={`flex-1 aspect-square overflow-hidden cursor-pointer bg-[#ECEAE4] transition-opacity duration-200 ${activeImg === i ? 'opacity-100' : 'opacity-45'}`}
+                  className={`aspect-square overflow-hidden cursor-pointer bg-gray-100 transition-opacity duration-300 ${activeImg === i ? 'opacity-100 ring-1 ring-black ring-offset-2' : 'opacity-50 hover:opacity-100'}`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Right: Details */}
-        <div className="md:pl-4 pt-2">
-          {/* Archive ID + Status */}
-          <div className="flex justify-between items-center mb-5">
-            <span className="font-dm-sans text-[10px] tracking-[0.2em] text-[#B0ADA8] uppercase">Archive No. {product.archive_id}</span>
-            <span className={`inline-block px-3 py-1.5 rounded-[2px] font-dm-sans text-[10px] font-medium tracking-[0.14em] uppercase ${
-              product.status === 'available' ? 'bg-[#E8F0E8] text-[#2D5A2D]' : 
-              product.status === 'reserved' ? 'bg-[#F5EDD8] text-[#8A6A28]' : 
-              'bg-[#EEE] text-muted-gray'
-            }`}>
-              {product.status === 'available' ? 'Available' : product.status === 'reserved' ? 'Currently Reserved' : 'Archived — Sold'}
-            </span>
-          </div>
-
-          <p className="font-dm-sans text-[11px] tracking-[0.24em] text-muted-gray uppercase mb-2.5">{product.brand}</p>
-          <h1 className="font-playfair text-[clamp(32px,4vw,46px)] font-normal text-charcoal leading-[1.1] tracking-tight mb-1.5">
-            {product.name}
-          </h1>
-          <p className="font-playfair italic text-[16px] text-muted-gray mb-8 tracking-[0.06em]">{product.era}</p>
-
-          <div className="border-t border-[#E0DED8] mb-7" />
-
-          {/* Pricing */}
-          <div className="mb-7">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="font-dm-sans text-[10px] tracking-[0.18em] text-[#B0ADA8] uppercase">Curated Price</span>
-            </div>
-            <div className="flex items-baseline gap-4">
-              <span className="font-playfair text-[42px] font-normal text-charcoal tracking-tight">₱{product.price.toLocaleString()}</span>
-              <div>
-                <p className="font-dm-sans text-[11px] text-[#C8C5BF] line-through font-light">SRP ₱{product.srp.toLocaleString()}</p>
-                <p className="font-dm-sans text-[10px] text-reserved-amber tracking-[0.1em] uppercase">Archived Value</p>
+          {/* Right: Details */}
+          <div className="lg:col-span-5">
+            <div className="sticky top-32">
+              <div className="flex justify-between items-center mb-8">
+                <span className="text-[10px] tracking-[0.2em] text-gray-400 uppercase font-bold">ARC-{product.archive_id}</span>
+                <span className={`text-[9px] px-3 py-1 font-bold uppercase tracking-widest ${
+                  product.status === 'available' ? 'bg-green-50 text-green-700' : 
+                  product.status === 'reserved' ? 'bg-amber-50 text-amber-700' : 
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {product.status === 'available' ? 'Available' : product.status === 'reserved' ? 'Reserved' : 'Sold'}
+                </span>
               </div>
-            </div>
-          </div>
 
-          {/* Specs */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            {[
-              { label: "Size", value: product.size },
-              { label: "Colorway", value: product.color },
-            ].map(spec => (
-              <div key={spec.label} className="bg-[#ECEAE4] p-3.5 px-4 rounded-[2px]">
-                <p className="font-dm-sans text-[9px] tracking-[0.2em] text-muted-gray uppercase mb-1">{spec.label}</p>
-                <p className="font-dm-sans text-[13px] text-charcoal font-normal">{spec.value}</p>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold mb-3">{product.brand}</p>
+              <h1 className="text-5xl font-playfair mb-4 leading-tight">{product.name}</h1>
+              <p className="text-lg text-gray-500 font-playfair italic mb-10">{product.era}</p>
+
+              <div className="flex items-baseline gap-6 mb-12">
+                <span className="text-4xl font-dm-sans font-medium">${product.price.toLocaleString()}</span>
+                <span className="text-sm text-gray-300 line-through font-light">SRP ${product.srp.toLocaleString()}</span>
               </div>
-            ))}
-          </div>
 
-          {/* CTA */}
-          {product.status === "available" && (
-            <button 
-              onClick={handleAddToCart}
-              className="w-full bg-charcoal text-warm-white py-4.5 font-dm-sans text-[11px] tracking-[0.24em] uppercase cursor-pointer mb-3 transition-all duration-200 hover:bg-accent-navy hover:tracking-[0.3em]"
-            >
-              Add to Reserve
-            </button>
-          )}
-          {product.status === "reserved" && !inCart && (
-            <div className="w-full py-4.5 text-center border border-[#D4A853] bg-[#FBF3E8] font-dm-sans text-[11px] tracking-[0.2em] uppercase text-[#8A6A28] mb-3">
-              Currently Reserved
-            </div>
-          )}
-          {inCart && (
-            <button 
-              onClick={() => setCartOpen(true)}
-              className="w-full border border-charcoal text-charcoal py-4.5 font-dm-sans text-[11px] tracking-[0.24em] uppercase cursor-pointer mb-3 flex items-center justify-center gap-2.5 transition-colors hover:bg-charcoal hover:text-warm-white"
-            >
-              <span>View Reserve</span>
-              <span className="font-playfair text-[14px] text-reserved-amber font-normal">{formatTime(timerSecs)}</span>
-            </button>
-          )}
-
-          <p className="font-dm-sans text-[10px] text-[#B0ADA8] text-center tracking-[0.1em]">
-            One-of-one. This piece exists nowhere else.
-          </p>
-
-          <div className="border-t border-[#E0DED8] mt-9" />
-
-          {/* Accordions */}
-          <div className="mt-1">
-            {accordionData.map(({ key, title, content }) => (
-              <div key={key} className="border-b border-[#E0DED8]">
-                <button 
-                  onClick={() => setOpenAccordion(openAccordion === key ? null : key)}
-                  className="w-full flex justify-between items-center py-[18px] cursor-pointer"
-                >
-                  <span className="font-dm-sans text-[11px] tracking-[0.2em] uppercase text-charcoal font-normal">{title}</span>
-                  <span className={`font-dm-sans text-[18px] text-muted-gray font-extralight transition-transform duration-300 ${openAccordion === key ? 'rotate-45' : 'rotate-0'}`}>+</span>
-                </button>
-                <div className={`overflow-hidden transition-all duration-400 ${openAccordion === key ? 'max-h-[300px] pb-5' : 'max-h-0'}`}>
-                  <p className="font-dm-sans text-[13px] leading-relaxed text-[#5A5A56] font-light">{content}</p>
+              <div className="grid grid-cols-2 gap-4 mb-10">
+                <div className="bg-white/50 p-4 border border-black/5">
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-bold mb-1">Size</p>
+                  <p className="text-sm font-medium">{product.size}</p>
+                </div>
+                <div className="bg-white/50 p-4 border border-black/5">
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400 font-bold mb-1">Color</p>
+                  <p className="text-sm font-medium">{product.color}</p>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Trust Badges */}
-          <div className="flex gap-6 mt-8">
-            {[
-              { icon: "○", label: "Condition Verified" },
-              { icon: "◇", label: "1-of-1 Guaranteed" },
-              { icon: "△", label: "Curated & Cleaned" },
-            ].map(b => (
-              <div key={b.label} className="text-center flex-1">
-                <p className="font-playfair text-[18px] text-[#B0ADA8] mb-1">{b.icon}</p>
-                <p className="font-dm-sans text-[9px] tracking-[0.14em] text-[#B0ADA8] uppercase">{b.label}</p>
+              {/* CTAs */}
+              <div className="space-y-4">
+                {product.status === "available" && (
+                  <button 
+                    onClick={handleAddToCart}
+                    className="w-full bg-black text-white py-5 text-[10px] uppercase tracking-[0.3em] font-bold hover:bg-gray-900 transition-all active:scale-[0.98]"
+                  >
+                    Add to Reserve
+                  </button>
+                )}
+                
+                {product.status === "reserved" && !inCart && (
+                  <div className="w-full py-5 text-center border border-amber-200 bg-amber-50 text-[10px] uppercase tracking-[0.3em] font-bold text-amber-700">
+                    Currently Reserved
+                  </div>
+                )}
+
+                {inCart && (
+                  <button 
+                    onClick={() => setIsCartOpen(true)}
+                    className="w-full border border-black py-5 text-[10px] uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-4 hover:bg-black hover:text-white transition-all"
+                  >
+                    <span>Item Reserved</span>
+                    <span className="font-dm-sans font-normal text-amber-600">{formatTime(timerSecs)}</span>
+                  </button>
+                )}
+                
+                <p className="text-[9px] text-gray-400 text-center uppercase tracking-widest pt-4">
+                  1-of-1 Original. No returns.
+                </p>
               </div>
-            ))}
+
+              {/* Accordions */}
+              <div className="mt-16 border-t border-black/10">
+                {accordionData.map(({ key, title, content }) => (
+                  <div key={key} className="border-b border-black/10">
+                    <button 
+                      onClick={() => setOpenAccordion(openAccordion === key ? null : key)}
+                      className="w-full flex justify-between items-center py-6 group"
+                    >
+                      <span className="text-[10px] uppercase tracking-[0.2em] font-bold group-hover:tracking-[0.3em] transition-all">{title}</span>
+                      <span className={`text-xl font-light transition-transform duration-300 ${openAccordion === key ? 'rotate-45' : ''}`}>+</span>
+                    </button>
+                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordion === key ? 'max-h-64 pb-8' : 'max-h-0'}`}>
+                      <p className="text-sm leading-relaxed text-gray-500 font-light">{content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Footer Strip */}
-      <div className="border-t border-[#E0DED8] px-12 py-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <svg width="24" height="18" viewBox="0 0 38 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 24 C4 24, 10 4, 19 4 C28 4, 34 24, 34 24" stroke="#B0ADA8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-            <path d="M9 24 C9 24, 13 12, 19 12 C25 12, 29 24, 29 24" stroke="#B0ADA8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-          </svg>
-          <span className="font-playfair text-[13px] font-light tracking-[0.2em] text-[#B0ADA8] uppercase">Archivé · Cagayan de Oro</span>
-        </div>
-        <p className="font-dm-sans text-[10px] tracking-[0.12em] text-[#C8C5BF]">
-          Curated vintage. No imitations. No reproductions.
-        </p>
-      </div>
-
-      <SlideOutCart 
-        isOpen={cartOpen} 
-        onClose={() => setCartOpen(false)} 
-        product={product} 
-        timerSeconds={timerSecs} 
-        onCheckout={handleCheckout} 
-      />
     </div>
   );
 }

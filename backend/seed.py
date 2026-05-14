@@ -13,8 +13,10 @@ def seed():
     
     # Check if products already exist
     if db.query(models.Product).count() > 0:
-        print("Database already seeded.")
-        return
+        print("Database already seeded. Clearing for fresh upgrade...")
+        db.query(models.Order).delete()
+        db.query(models.Product).delete()
+        db.commit()
 
     products = [
         {
@@ -80,11 +82,79 @@ def seed():
             "color": "Cherry Red",
             "status": "available",
             "images": json.dumps([
-                "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=85",
+                "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=900&q=85",
             ]),
             "fit_details": "True to size. High ankle support.",
             "fabric_details": "Full grain cowhide leather.",
             "condition_details": "Well broken in. Minor scuffs on toe box.",
+        },
+        {
+            "archive_id": "ARC-0045",
+            "name": "Workwear Canvas Pants",
+            "era": "Circa 1990s",
+            "brand": "CARHARTT VINTAGE",
+            "srp": 3800.0,
+            "price": 1850.0,
+            "size": "32W x 30L",
+            "color": "Tan",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=900&q=85",
+            ]),
+            "fit_details": "Relaxed fit, straight leg.",
+            "fabric_details": "12oz 100% Cotton Duck Canvas.",
+            "condition_details": "Faded knees, perfectly aged.",
+        },
+        {
+            "archive_id": "ARC-0046",
+            "name": "Cashmere Knit Sweater",
+            "era": "Circa 2010",
+            "brand": "PRADA ARCHIVE",
+            "srp": 12000.0,
+            "price": 5400.0,
+            "size": "M / IT 48",
+            "color": "Navy",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1574180563860-26b282c0dc14?w=900&q=85",
+            ]),
+            "fit_details": "Slim fit, ribbed collar.",
+            "fabric_details": "100% Mongolian Cashmere.",
+            "condition_details": "Excellent condition, professionally dry cleaned.",
+        },
+        {
+            "archive_id": "ARC-0047",
+            "name": "Leather Chelsea Boots",
+            "era": "Circa 2015",
+            "brand": "SAINT LAURENT PARIS",
+            "srp": 45000.0,
+            "price": 18500.0,
+            "size": "43 EU / 10 US",
+            "color": "Black",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=900&q=85",
+            ]),
+            "fit_details": "Narrow fit, 30mm heel.",
+            "fabric_details": "Smooth calfskin leather.",
+            "condition_details": "Light wear on soles, uppers are perfect.",
+        },
+        {
+            "archive_id": "ARC-0048",
+            "name": "Graphic Print T-Shirt",
+            "era": "Circa 1994",
+            "brand": "NIRVANA VINTAGE",
+            "srp": 15000.0,
+            "price": 6200.0,
+            "size": "XL / US 46",
+            "color": "Faded Black",
+            "status": "available",
+            "images": json.dumps([
+                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=900&q=85",
+            ]),
+            "fit_details": "Oversized, boxy fit.",
+            "fabric_details": "100% Heavyweight Cotton.",
+            "condition_details": "Single stitch, cracked print (desirable).",
         }
     ]
 

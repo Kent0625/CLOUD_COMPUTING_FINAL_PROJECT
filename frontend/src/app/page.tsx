@@ -1,9 +1,5 @@
-import ProductPage from "@/components/ProductPage";
+import HomePage from "@/components/HomePage";
 
-export default function Home() {
-  return (
-    <main>
-      <ProductPage />
-    </main>
-  );
+export default function Page() {
+  return <HomePage />;
 }

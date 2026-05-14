@@ -9,6 +9,13 @@
   --color-muted-gray: #8A8A85;
   --color-accent-navy: #1A2340;
   --color-reserved-amber: #B89A6A;
+
+  --animate-marquee: marquee 40s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
 }
 
 @layer base {

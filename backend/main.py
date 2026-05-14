@@ -109,6 +109,22 @@ def reserve_product(product_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Item reserved for 10 minutes", "ttl": 600}
 
+@app.post("/products/{product_id}/unreserve")
+def unreserve_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    # Delete the Redis lock
+    redis_client.delete(f"lock:product:{product_id}")
+    
+    # Set status back to available
+    if product.status == "reserved":
+        product.status = "available"
+        db.commit()
+        
+    return {"message": "Item released"}
+
 @app.post("/products/{product_id}/checkout")
 def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(get_db)):
     product, locked = get_current_item_status(product_id, db)

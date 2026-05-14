@@ -87,6 +87,16 @@ export async function reserveProduct(id: number) {
   return res.json();
 }
 
+export async function unreserveProduct(id: number) {
+  const res = await fetchWithTimeout(`${API_BASE_URL}/products/${id}/unreserve`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error("Unable to release this piece.");
+  }
+  return res.json();
+}
+
 export async function checkoutProduct(id: number, zone: string) {
   const res = await fetchWithTimeout(`${API_BASE_URL}/products/${id}/checkout?delivery_zone=${zone}`, {
     method: "POST",

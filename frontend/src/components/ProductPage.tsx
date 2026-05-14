@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { fetchProduct, reserveProduct } from "@/lib/api";
 import { useCart } from "@/contexts/CartContext";
 
@@ -13,6 +14,7 @@ function formatTime(s: number) {
 }
 
 export default function ProductPage({ productId }: { productId: string }) {
+  const router = useRouter();
   const [product, setProduct] = useState<any>(null);
   const [activeImg, setActiveImg] = useState(0);
   const [timerSecs, setTimerSecs] = useState(TIMER_DURATION);
@@ -111,9 +113,18 @@ export default function ProductPage({ productId }: { productId: string }) {
   return (
     <div className="bg-[#F5F4F0] min-h-screen pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Breadcrumb */}
-        <div className="mb-12 flex gap-3 items-center">
-          {["Collection", product.brand, product.name].map((crumb, i, arr) => (
+        {/* Back Button & Breadcrumb */}
+        <div className="mb-12 flex flex-col gap-6">
+          <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 group w-fit"
+          >
+            <span className="text-lg transition-transform group-hover:-translate-x-1">←</span>
+            <span className="text-[10px] uppercase tracking-widest font-bold border-b border-black/0 group-hover:border-black transition-all">Back to Collection</span>
+          </button>
+
+          <div className="flex gap-3 items-center">
+            {["Collection", product.brand, product.name].map((crumb, i, arr) => (
             <span key={crumb} className="flex items-center gap-3">
               <span className={`text-[9px] uppercase tracking-[0.2em] font-semibold ${i === arr.length - 1 ? 'text-black' : 'text-gray-400'}`}>
                 {crumb}
@@ -121,6 +132,7 @@ export default function ProductPage({ productId }: { productId: string }) {
               {i < arr.length - 1 && <span className="text-gray-300">/</span>}
             </span>
           ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">

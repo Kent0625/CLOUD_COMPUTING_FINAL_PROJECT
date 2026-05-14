@@ -19,9 +19,18 @@ export default function SlideOutCart() {
   });
   const [paymentMethod, setPaymentMethod] = useState("GCash");
   
+  // NEW: Track if we are viewing the cart or entering details
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'details'>('cart');
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'qr' | 'processing' | 'success'>('idle');
   const [qrCountdown, setQrCountdown] = useState(6);
   const [touched, setTouched] = useState(false);
+
+  // Reset step when cart closes
+  useEffect(() => {
+    if (!isCartOpen) {
+      setTimeout(() => setCheckoutStep('cart'), 300);
+    }
+  }, [isCartOpen]);
 
   const isFormValid = useMemo(() => {
     return (
@@ -38,7 +47,12 @@ export default function SlideOutCart() {
   const citiesList = address.province ? Object.keys(PH_DATA[address.province].cities) : [];
   const barangaysList = (address.province && address.city) ? PH_DATA[address.province].cities[address.city] : [];
 
-  const handleCheckoutClick = () => {
+  const handleActionClick = () => {
+    if (checkoutStep === 'cart') {
+      setCheckoutStep('details');
+      return;
+    }
+
     setTouched(true);
     if (!isFormValid) return;
     
@@ -91,7 +105,7 @@ export default function SlideOutCart() {
   if (!isCartOpen) return null;
 
   const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
-  const shipping = zone === "Zone 1" ? 120 : 180;
+  const shipping = checkoutStep === 'details' ? (zone === "Zone 1" ? 120 : 180) : 0;
 
   return (
     <>
@@ -100,7 +114,14 @@ export default function SlideOutCart() {
         
         {/* Header */}
         <div className="flex justify-between items-center p-8 border-b border-black/5 bg-white/50 backdrop-blur-md sticky top-0 z-10">
-          <h2 className="text-2xl font-playfair italic">Your Bag</h2>
+          <div className="flex items-center gap-4">
+            {checkoutStep === 'details' && checkoutStatus === 'idle' && (
+              <button onClick={() => setCheckoutStep('cart')} className="text-xl hover:-translate-x-1 transition-transform">←</button>
+            )}
+            <h2 className="text-2xl font-playfair italic">
+              {checkoutStep === 'cart' ? 'Your Bag' : 'Checkout'}
+            </h2>
+          </div>
           <button onClick={() => setIsCartOpen(false)} className="text-2xl font-light hover:rotate-90 transition-transform">✕</button>
         </div>
 
@@ -148,117 +169,121 @@ export default function SlideOutCart() {
             </div>
           ) : (
             <>
-              {/* Items List */}
+              {/* Items List - Always visible but smaller in details step */}
               <div className="space-y-6">
                 <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Selected Items ({cart.length})</p>
                 <div className="space-y-4">
                   {cart.map(item => (
-                    <div key={item.id} className="flex gap-6 items-center group bg-white p-4 border border-black/5">
+                    <div key={item.id} className={`flex gap-6 items-center group bg-white p-4 border border-black/5 transition-all ${checkoutStep === 'details' ? 'opacity-60 scale-95 origin-left' : ''}`}>
                       <div className="w-16 aspect-[3/4] bg-gray-100 overflow-hidden">
                         <img src={item.image || "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=100"} alt={item.name} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
                         <h3 className="text-[11px] font-bold uppercase tracking-tight">{item.name}</h3>
                         <p className="text-xs text-gray-400 font-medium">₱{item.price.toLocaleString()}</p>
-                        <button onClick={() => removeFromCart(item.id)} className="text-[9px] uppercase tracking-widest text-red-800 mt-2 hover:underline">Remove</button>
+                        {checkoutStep === 'cart' && (
+                          <button onClick={() => removeFromCart(item.id)} className="text-[9px] uppercase tracking-widest text-red-800 mt-2 hover:underline">Remove</button>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Checkout Form */}
-              <div className="space-y-8 pt-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
-                  {touched && !isFormValid && (
-                    <span className="text-[9px] text-red-500 uppercase font-bold tracking-tighter">Required Info</span>
-                  )}
-                </div>
-                <div className="space-y-6">
-                  <input 
-                    type="text" placeholder="Full Name" value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && fullName.trim().length < 3 ? 'border-red-400' : 'border-black/10'}`}
-                  />
-                  <input 
-                    type="tel" placeholder="Phone Number (10 digits)" value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && phone.length < 10 ? 'border-red-400' : 'border-black/10'}`}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <select 
-                      value={address.province}
-                      onChange={(e) => setAddress({...address, province: e.target.value, city: "", barangay: ""})}
-                      className={`bg-transparent border-b py-3 text-sm outline-none ${touched && !address.province ? 'border-red-400 text-red-400' : 'border-black/10'}`}
-                    >
-                      <option value="">Province</option>
-                      {provincesList.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                    <select 
-                      value={address.city}
-                      disabled={!address.province}
-                      onChange={(e) => setAddress({...address, city: e.target.value, barangay: ""})}
-                      className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.city ? 'border-red-400 text-red-400' : 'border-black/10'}`}
-                    >
-                      <option value="">City</option>
-                      {citiesList.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+              {/* Checkout Form - ONLY visible in details step */}
+              {checkoutStep === 'details' && (
+                <div className="space-y-8 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Delivery Details</p>
+                    {touched && !isFormValid && (
+                      <span className="text-[9px] text-red-500 uppercase font-bold tracking-tighter">Required Info</span>
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <select 
-                      value={address.barangay}
-                      disabled={!address.city}
-                      onChange={(e) => setAddress({...address, barangay: e.target.value})}
-                      className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.barangay ? 'border-red-400 text-red-400' : 'border-black/10'}`}
-                    >
-                      <option value="">Barangay</option>
-                      {barangaysList.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
+                  <div className="space-y-6">
                     <input 
-                      type="text" placeholder="House No. / Street" value={address.street}
-                      onChange={(e) => setAddress({...address, street: e.target.value})}
-                      className={`bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && address.street.length < 5 ? 'border-red-400' : 'border-black/10'}`}
+                      type="text" placeholder="Full Name" value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && fullName.trim().length < 3 ? 'border-red-400' : 'border-black/10'}`}
                     />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Shipping</p>
-                  <div className="space-y-2">
-                    {[
-                      { z: "Zone 1", l: "Metro Same Day", p: 120 },
-                      { z: "Zone 2", l: "Provincial 3-5 Days", p: 180 }
-                    ].map(opt => (
-                      <label key={opt.z} className={`flex items-center justify-between p-4 border rounded-sm cursor-pointer transition-all ${zone === opt.z ? 'border-black bg-white' : 'border-black/5 hover:border-black/20'}`}>
-                        <div className="flex items-center gap-3">
-                          <input type="radio" checked={zone === opt.z} onChange={() => setZone(opt.z)} className="accent-black" />
-                          <span className="text-xs uppercase font-bold tracking-tight">{opt.l}</span>
-                        </div>
-                        <span className="text-xs font-medium">₱{opt.p}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Payment Method</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {["GCash", "Online Payment", "Cash on Delivery", "Bank Transfer"].map(m => (
-                            <button 
-                                key={m} 
-                                type="button"
-                                onClick={() => setPaymentMethod(m)}
-                                className={`text-[10px] uppercase tracking-tight py-3 border rounded-sm transition-all font-bold ${paymentMethod === m ? 'border-black bg-black text-white' : 'border-black/10 text-gray-500 hover:border-black/30'}`}
-                            >
-                                {m}
-                            </button>
-                        ))}
+                    <input 
+                      type="tel" placeholder="Phone Number (10 digits)" value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      className={`w-full bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && phone.length < 10 ? 'border-red-400' : 'border-black/10'}`}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <select 
+                        value={address.province}
+                        onChange={(e) => setAddress({...address, province: e.target.value, city: "", barangay: ""})}
+                        className={`bg-transparent border-b py-3 text-sm outline-none ${touched && !address.province ? 'border-red-400 text-red-400' : 'border-black/10'}`}
+                      >
+                        <option value="">Province</option>
+                        {provincesList.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <select 
+                        value={address.city}
+                        disabled={!address.province}
+                        onChange={(e) => setAddress({...address, city: e.target.value, barangay: ""})}
+                        className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.city ? 'border-red-400 text-red-400' : 'border-black/10'}`}
+                      >
+                        <option value="">City</option>
+                        {citiesList.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <select 
+                        value={address.barangay}
+                        disabled={!address.city}
+                        onChange={(e) => setAddress({...address, barangay: e.target.value})}
+                        className={`bg-transparent border-b py-3 text-sm outline-none disabled:opacity-30 ${touched && !address.barangay ? 'border-red-400 text-red-400' : 'border-black/10'}`}
+                      >
+                        <option value="">Barangay</option>
+                        {barangaysList.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                      <input 
+                        type="text" placeholder="House No. / Street" value={address.street}
+                        onChange={(e) => setAddress({...address, street: e.target.value})}
+                        className={`bg-transparent border-b py-3 text-sm focus:border-black transition-colors outline-none ${touched && address.street.length < 5 ? 'border-red-400' : 'border-black/10'}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Shipping</p>
+                    <div className="space-y-2">
+                      {[
+                        { z: "Zone 1", l: "Metro Same Day", p: 120 },
+                        { z: "Zone 2", l: "Provincial 3-5 Days", p: 180 }
+                      ].map(opt => (
+                        <label key={opt.z} className={`flex items-center justify-between p-4 border rounded-sm cursor-pointer transition-all ${zone === opt.z ? 'border-black bg-white' : 'border-black/5 hover:border-black/20'}`}>
+                          <div className="flex items-center gap-3">
+                            <input type="radio" checked={zone === opt.z} onChange={() => setZone(opt.z)} className="accent-black" />
+                            <span className="text-xs uppercase font-bold tracking-tight">{opt.l}</span>
+                          </div>
+                          <span className="text-xs font-medium">₱{opt.p}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Payment Method</p>
+                      <div className="grid grid-cols-2 gap-2">
+                          {["GCash", "Online Payment", "Cash on Delivery", "Bank Transfer"].map(m => (
+                              <button 
+                                  key={m} 
+                                  type="button"
+                                  onClick={() => setPaymentMethod(m)}
+                                  className={`text-[10px] uppercase tracking-tight py-3 border rounded-sm transition-all font-bold ${paymentMethod === m ? 'border-black bg-black text-white' : 'border-black/10 text-gray-500 hover:border-black/30'}`}
+                              >
+                                  {m}
+                              </button>
+                          ))}
+                      </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -268,15 +293,18 @@ export default function SlideOutCart() {
           <div className="p-8 bg-white border-t border-black/5 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
             <div className="flex justify-between items-end mb-8">
               <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Subtotal</span>
-              <span className="text-2xl font-dm-sans font-medium">₱{(subtotal + shipping).toLocaleString()}</span>
+              <div className="text-right">
+                {shipping > 0 && <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">+ ₱{shipping} Shipping</p>}
+                <span className="text-2xl font-dm-sans font-medium">₱{(subtotal + shipping).toLocaleString()}</span>
+              </div>
             </div>
             <button 
-              onClick={handleCheckoutClick}
+              onClick={handleActionClick}
               className={`w-full py-5 text-[10px] uppercase tracking-widest font-bold transition-all ${
-                isFormValid ? "bg-black text-white hover:bg-gray-900" : "bg-gray-100 text-gray-400"
+                (checkoutStep === 'cart' || isFormValid) ? "bg-black text-white hover:bg-gray-900" : "bg-gray-100 text-gray-400"
               }`}
             >
-              {isFormValid ? (paymentMethod === "Cash on Delivery" ? "Place Order" : `Pay via ${paymentMethod}`) : "Complete Details"}
+              {checkoutStep === 'cart' ? 'Proceed to Checkout' : (isFormValid ? (paymentMethod === "Cash on Delivery" ? "Place Order" : `Pay via ${paymentMethod}`) : "Complete Details")}
             </button>
           </div>
         )}

@@ -60,7 +60,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setIsCartOpen(true), 100);
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = async (id: number) => {
+    try {
+      // Import the api function dynamically or use it directly if imported at top
+      const { unreserveProduct } = await import("@/lib/api");
+      await unreserveProduct(id);
+    } catch (e) {
+      console.error("Failed to unreserve product", e);
+    }
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 

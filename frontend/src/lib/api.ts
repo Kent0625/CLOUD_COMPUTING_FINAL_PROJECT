@@ -88,3 +88,37 @@ export async function checkoutProduct(id: number, zone: string) {
   if (!res.ok) throw new Error("Secure checkout failed. Please try again.");
   return res.json();
 }
+
+export async function fetchAnalyticsSummary() {
+  try {
+    const res = await fetchWithRetry(`${API_BASE_URL}/analytics/summary`);
+    if (!res.ok) throw new Error("Failed to fetch analytics summary.");
+    return res.json();
+  } catch (err) {
+    console.error("API Error:", err);
+    throw err;
+  }
+}
+
+export async function fetchAnalyticsSales() {
+  try {
+    const res = await fetchWithRetry(`${API_BASE_URL}/analytics/sales`);
+    if (!res.ok) throw new Error("Failed to fetch sales analytics.");
+    return res.json();
+  } catch (err) {
+    console.error("API Error:", err);
+    throw err;
+  }
+}
+
+export async function fetchTopProducts() {
+  try {
+    const res = await fetchWithRetry(`${API_BASE_URL}/analytics/top-products`);
+    if (!res.ok) throw new Error("Failed to fetch top products.");
+    return res.json();
+  } catch (err) {
+    console.error("API Error:", err);
+    throw err;
+  }
+}
+

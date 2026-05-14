@@ -11,11 +11,13 @@ load_dotenv()
 
 # Absolute imports for production runtime compatibility
 try:
-    from . import models, database
+    from . import models, database, reporting_models, reporting_database
     from .database import engine, redis_client, get_db
+    from .reporting_database import get_reporting_db
 except ImportError:
-    import models, database
+    import models, database, reporting_models, reporting_database
     from database import engine, redis_client, get_db
+    from reporting_database import get_reporting_db
 
 # Create tables on startup (Safe/Idempotent)
 models.Base.metadata.create_all(bind=engine)
@@ -129,3 +131,43 @@ def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(
     db.commit()
     
     return {"message": "Purchase successful", "order_id": new_order.id}
+
+# ── Analytics Routes ────────────────────────────────────────────────
+
+@app.get("/analytics/summary")
+def get_analytics_summary(rep_db: Session = Depends(get_reporting_db)):
+    from sqlalchemy import func
+    total_revenue = rep_db.query(func.sum(reporting_models.DailySalesSummary.total_revenue)).scalar() or 0.0
+    total_orders = rep_db.query(func.sum(reporting_models.DailySalesSummary.total_orders)).scalar() or 0
+    total_customers = rep_db.query(func.count(reporting_models.DimUser.id)).scalar() or 0
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_orders": total_orders,
+        "total_customers": total_customers
+    }
+
+@app.get("/analytics/sales")
+def get_sales_analytics(rep_db: Session = Depends(get_reporting_db)):
+    sales = rep_db.query(reporting_models.DailySalesSummary).order_by(reporting_models.DailySalesSummary.date).all()
+    return [{"date": s.date, "total_orders": s.total_orders, "total_revenue": s.total_revenue} for s in sales]
+
+@app.get("/analytics/top-products")
+def get_top_products(rep_db: Session = Depends(get_reporting_db)):
+    from sqlalchemy import func
+    top_products = rep_db.query(
+        reporting_models.DimProduct.name,
+        func.count(reporting_models.FactOrder.id).label('sold_count')
+    ).join(
+        reporting_models.FactOrder,
+        reporting_models.DimProduct.original_product_id == reporting_models.FactOrder.product_id
+    ).filter(
+        reporting_models.FactOrder.status == 'paid'
+    ).group_by(
+        reporting_models.DimProduct.id
+    ).order_by(
+        func.count(reporting_models.FactOrder.id).desc()
+    ).limit(5).all()
+    
+    return [{"name": p.name, "sold_count": p.sold_count} for p in top_products]
+

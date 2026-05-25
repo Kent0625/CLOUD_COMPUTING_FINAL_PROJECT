@@ -223,11 +223,3 @@ cd frontend
 npm run lint
 npm run build
 ```
-
-## Demo Checklist
-
-- Show storefront product browsing.
-- Reserve an item and complete checkout.
-- Run `backend/run_etl.sh` or wait for cron.
-- Open `/dashboard` and show revenue, daily sales, top products, and customer growth.
-- Show VPS services: `pm2 list`, `systemctl status nginx`, and the two PostgreSQL databases.

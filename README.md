@@ -2,7 +2,7 @@
 
 Archive is a premium thrift-store e-commerce app built with a Next.js storefront, FastAPI backend, PostgreSQL transactional database, separate PostgreSQL reporting database, and a cron-driven ETL pipeline.
 
-## Requirement Alignment
+## Requirement 
 
 | Requirement | Status | Where |
 | --- | --- | --- |

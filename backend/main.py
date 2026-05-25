@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
 import os
+import hashlib
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -21,6 +22,7 @@ except ImportError:
 
 # Create tables on startup (Safe/Idempotent)
 models.Base.metadata.create_all(bind=engine)
+reporting_models.ReportingBase.metadata.create_all(bind=reporting_database.reporting_engine)
 
 app = FastAPI(title="Archivé Premium Thrift API")
 
@@ -57,6 +59,26 @@ def get_current_item_status(item_id: int, db: Session):
         db.refresh(product)
         
     return product, lock_exists
+
+def get_or_create_checkout_user(customer_phone: Optional[str], db: Session):
+    if not customer_phone:
+        return None
+
+    digits = "".join(ch for ch in customer_phone if ch.isdigit())
+    if not digits:
+        return None
+
+    customer_key = hashlib.sha256(digits.encode("utf-8")).hexdigest()[:16]
+    email = f"checkout-{customer_key}@archive.local"
+    user = db.query(models.User).filter(models.User.email == email).first()
+
+    if user:
+        return user.id
+
+    user = models.User(email=email, hashed_password="guest-checkout")
+    db.add(user)
+    db.flush()
+    return user.id
 
 # ── Routes ──────────────────────────────────────────────────────────
 
@@ -126,7 +148,13 @@ def unreserve_product(product_id: int, db: Session = Depends(get_db)):
     return {"message": "Item released"}
 
 @app.post("/products/{product_id}/checkout")
-def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(get_db)):
+def checkout_product(
+    product_id: int,
+    delivery_zone: str,
+    customer_name: Optional[str] = None,
+    customer_phone: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     product, locked = get_current_item_status(product_id, db)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -137,7 +165,10 @@ def checkout_product(product_id: int, delivery_zone: str, db: Session = Depends(
     product.status = "sold"
     redis_client.delete(f"lock:product:{product_id}")
     
+    user_id = get_or_create_checkout_user(customer_phone, db)
+
     new_order = models.Order(
+        user_id=user_id,
         product_id=product_id,
         total_amount=product.price,
         status="paid",
@@ -186,4 +217,25 @@ def get_top_products(rep_db: Session = Depends(get_reporting_db)):
     ).limit(5).all()
     
     return [{"name": p.name, "sold_count": p.sold_count} for p in top_products]
+
+@app.get("/analytics/customers")
+def get_customer_analytics(rep_db: Session = Depends(get_reporting_db)):
+    from sqlalchemy import func
+
+    customers = rep_db.query(
+        func.date(reporting_models.DimUser.created_at).label("date"),
+        func.count(reporting_models.DimUser.id).label("new_customers")
+    ).group_by(
+        func.date(reporting_models.DimUser.created_at)
+    ).order_by(
+        func.date(reporting_models.DimUser.created_at)
+    ).all()
+
+    return [
+        {
+            "date": c.date.isoformat() if hasattr(c.date, "isoformat") else c.date,
+            "new_customers": c.new_customers,
+        }
+        for c in customers
+    ]
 

@@ -10,6 +10,10 @@ services:
         fromDatabase:
           name: archive-db
           property: connectionString
+      - key: REPORTING_DATABASE_URL
+        fromDatabase:
+          name: archive-reporting-db
+          property: connectionString
       - key: REDIS_URL
         fromService:
           name: archive-redis
@@ -38,4 +42,6 @@ services:
 
 databases:
   - name: archive-db
+    plan: free
+  - name: archive-reporting-db
     plan: free

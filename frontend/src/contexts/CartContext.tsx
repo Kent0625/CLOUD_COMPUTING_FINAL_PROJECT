@@ -19,50 +19,46 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const STORAGE_KEY = "thrift_cart";
+
+function readStoredCart(): CartItem[] {
+  if (typeof window === "undefined") return [];
+
+  const savedCart = window.localStorage.getItem(STORAGE_KEY);
+  if (!savedCart) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(savedCart);
+    return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+  } catch (error) {
+    console.error("Failed to parse cart from storage", error);
+    return [];
+  }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(readStoredCart);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const isInitialMount = useRef(true);
 
-  // 1. Initial Load from LocalStorage (ONLY ONCE)
   useEffect(() => {
-    const savedCart = localStorage.getItem("thrift_cart");
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart);
-        if (Array.isArray(parsed)) {
-          setCart(parsed);
-        }
-      } catch (e) {
-        console.error("Failed to parse cart from storage", e);
-      }
-    }
-  }, []);
-
-  // 2. Save to LocalStorage whenever cart changes
-  useEffect(() => {
-    // Skip the very first run to prevent overwriting stored data with empty state
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    localStorage.setItem("thrift_cart", JSON.stringify(cart));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (product: CartItem) => {
     setCart((prev) => {
-      // Prevent duplicates
       if (prev.some((item) => item.id === product.id)) return prev;
       return [...prev, product];
     });
-    // Give a small delay to ensure state update before opening
     setTimeout(() => setIsCartOpen(true), 100);
   };
 
   const removeFromCart = async (id: number) => {
     try {
-      // Import the api function dynamically or use it directly if imported at top
       const { unreserveProduct } = await import("@/lib/api");
       await unreserveProduct(id);
     } catch (e) {

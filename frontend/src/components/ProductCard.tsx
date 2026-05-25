@@ -1,35 +1,32 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-
-interface Product {
-  id: number;
-  name: string;
-  brand: string;
-  price: number;
-  images: string[];
-  status: string;
-}
+import { pesoFormatter } from "@/lib/format";
+import type { Product } from "@/lib/types";
 
 export default function ProductCard({ product }: { product: Product }) {
   const isSold = product.status === "sold";
   const isReserved = product.status === "reserved";
-  
-  // Safe image access
-  const displayImage = Array.isArray(product.images) && product.images.length > 0 
-    ? product.images[0] 
-    : "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=900&q=85";
+  const displayImage =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images[0]
+      : "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=900&q=85";
 
   return (
-    <Link 
+    <Link
       href={`/products/${product.id}`}
-      className="group block relative overflow-hidden"
+      className="group block relative overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
     >
       <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
-        <img
+        <Image
           src={displayImage}
           alt={product.name}
-          className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${(isSold || isReserved) ? "grayscale" : ""}`}
+          fill
+          sizes="(min-width: 768px) 25vw, 50vw"
+          className={`object-cover transition-transform duration-700 group-hover:scale-105 ${
+            isSold || isReserved ? "grayscale" : ""
+          }`}
         />
         {isSold && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -46,15 +43,17 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
         )}
       </div>
-      
+
       <div className="mt-4 space-y-1">
-        <div className="flex justify-between items-start">
-          <h3 className="text-[11px] font-bold uppercase text-gray-900 group-hover:underline decoration-1 tracking-tight">
+        <div className="flex justify-between items-start gap-3 min-w-0">
+          <h3 className="text-[11px] font-bold uppercase text-gray-900 group-hover:underline decoration-1 tracking-tight break-words">
             {product.name}
           </h3>
-          <p className="text-sm font-semibold tracking-tighter">₱{product.price.toLocaleString()}</p>
+          <p className="text-sm font-semibold tracking-tighter tabular-nums shrink-0">
+            {pesoFormatter.format(product.price)}
+          </p>
         </div>
-        <p className="text-[9px] uppercase tracking-widest text-gray-400 font-bold">
+        <p className="text-[9px] uppercase tracking-widest text-gray-400 font-bold truncate">
           {product.brand}
         </p>
       </div>

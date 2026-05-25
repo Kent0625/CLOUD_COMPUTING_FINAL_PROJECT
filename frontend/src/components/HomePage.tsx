@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { fetchProducts } from "@/lib/api";
+import type { Product } from "@/lib/types";
 import ProductCard from "./ProductCard";
 
 export default function HomePage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,14 +25,17 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="min-h-screen">
+    <main id="main-content" className="min-h-screen">
       {/* Hero Section */}
       <section className="relative h-[80vh] flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&q=80" 
-            className="w-full h-full object-cover opacity-60"
-            alt="Hero"
+          <Image
+            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&q=80"
+            alt="Curated vintage store interior"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-60"
           />
         </div>
         <div className="relative z-10 text-center text-white px-4">
@@ -97,7 +102,7 @@ export default function HomePage() {
       <footer className="border-t border-gray-100 py-20 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-playfair mb-6 italic">Archivé</h3>
+            <h3 className="text-2xl font-playfair mb-6 italic">Archive</h3>
             <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
               We curate high-end archival garments from the 80s to the present day, focusing on Japanese and European avant-garde designers.
             </p>

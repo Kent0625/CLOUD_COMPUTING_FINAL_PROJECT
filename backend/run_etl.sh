@@ -2,14 +2,19 @@
 # run_etl.sh - Script to run the ETL process for the reporting database.
 # To be executed via cron job on the VPS.
 
-# Navigate to the backend directory
+set -euo pipefail
+
 cd "$(dirname "$0")"
 
-# If using a virtual environment, activate it:
-# source venv/bin/activate
+if [ -f "venv/bin/activate" ]; then
+  source "venv/bin/activate"
+fi
 
-# Load environment variables if needed
-# export $(grep -v '^#' .env | xargs)
+if [ -f ".env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source ".env"
+  set +a
+fi
 
-# Run the ETL script
 python3 etl.py

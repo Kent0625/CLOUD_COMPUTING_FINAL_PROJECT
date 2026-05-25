@@ -1,12 +1,19 @@
-const API_BASE_URL = "/api";
-// When deployed to Render, we will use the proxy or environment variable
-// process.env.NEXT_PUBLIC_API_URL || "/api"
+import type {
+  AnalyticsSummary,
+  CustomerPoint,
+  Product,
+  SalesPoint,
+  TopProduct,
+} from "./types";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+type FetchOptions = RequestInit & { timeout?: number };
 
 /**
  * Robust fetch wrapper to handle Render's "sleeping" instances 
  * and network timeouts common in production.
  */
-async function fetchWithTimeout(resource: string, options: any = {}) {
+async function fetchWithTimeout(resource: string, options: FetchOptions = {}) {
   const { timeout = 12000 } = options; // Increased to 12s for cold starts
   
   const controller = new AbortController();
@@ -23,10 +30,10 @@ async function fetchWithTimeout(resource: string, options: any = {}) {
     });
     clearTimeout(id);
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Our boutique is taking a moment to open. Please retry.');
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Our boutique is taking a moment to open. Please retry.");
     }
     throw error;
   }
@@ -41,15 +48,15 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
       const res = await fetchWithTimeout(url);
       if (res.ok) return res;
       if (res.status !== 503 && res.status !== 504) break; // Don't retry on user errors
-    } catch (e) {
-      if (i === retries) throw e;
+    } catch (error) {
+      if (i === retries) throw error;
     }
     await new Promise(r => setTimeout(r, 2000 * (i + 1)));
   }
   return fetch(url); // Final attempt
 }
 
-export async function fetchProducts() {
+export async function fetchProducts(): Promise<Product[]> {
   try {
     const res = await fetchWithRetry(`${API_BASE_URL}/products`);
     if (!res.ok) throw new Error("Our boutique is currently resting. Please refresh in a moment.");
@@ -60,7 +67,7 @@ export async function fetchProducts() {
   }
 }
 
-export async function fetchProduct(id: number) {
+export async function fetchProduct(id: number): Promise<Product> {
   try {
     const url = `${API_BASE_URL}/products/${id}`;
     console.log(`Fetching product from: ${url}`);
@@ -97,15 +104,20 @@ export async function unreserveProduct(id: number) {
   return res.json();
 }
 
-export async function checkoutProduct(id: number, zone: string) {
-  const res = await fetchWithTimeout(`${API_BASE_URL}/products/${id}/checkout?delivery_zone=${zone}`, {
+export async function checkoutProduct(id: number, zone: string, customerName?: string, customerPhone?: string) {
+  const params = new URLSearchParams({ delivery_zone: zone });
+
+  if (customerName) params.set("customer_name", customerName);
+  if (customerPhone) params.set("customer_phone", customerPhone);
+
+  const res = await fetchWithTimeout(`${API_BASE_URL}/products/${id}/checkout?${params.toString()}`, {
     method: "POST",
   });
   if (!res.ok) throw new Error("Secure checkout failed. Please try again.");
   return res.json();
 }
 
-export async function fetchAnalyticsSummary() {
+export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   try {
     const res = await fetchWithRetry(`${API_BASE_URL}/analytics/summary`);
     if (!res.ok) throw new Error("Failed to fetch analytics summary.");
@@ -116,7 +128,7 @@ export async function fetchAnalyticsSummary() {
   }
 }
 
-export async function fetchAnalyticsSales() {
+export async function fetchAnalyticsSales(): Promise<SalesPoint[]> {
   try {
     const res = await fetchWithRetry(`${API_BASE_URL}/analytics/sales`);
     if (!res.ok) throw new Error("Failed to fetch sales analytics.");
@@ -127,10 +139,21 @@ export async function fetchAnalyticsSales() {
   }
 }
 
-export async function fetchTopProducts() {
+export async function fetchTopProducts(): Promise<TopProduct[]> {
   try {
     const res = await fetchWithRetry(`${API_BASE_URL}/analytics/top-products`);
     if (!res.ok) throw new Error("Failed to fetch top products.");
+    return res.json();
+  } catch (err) {
+    console.error("API Error:", err);
+    throw err;
+  }
+}
+
+export async function fetchCustomerAnalytics(): Promise<CustomerPoint[]> {
+  try {
+    const res = await fetchWithRetry(`${API_BASE_URL}/analytics/customers`);
+    if (!res.ok) throw new Error("Failed to fetch customer analytics.");
     return res.json();
   } catch (err) {
     console.error("API Error:", err);

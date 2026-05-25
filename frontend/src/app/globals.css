@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-playfair: var(--font-playfair);
-  --font-dm-sans: var(--font-dm-sans);
+  --font-playfair: Georgia, "Times New Roman", serif;
+  --font-dm-sans: "Inter", "Segoe UI", Arial, sans-serif;
   
   --color-charcoal: #111110;
   --color-warm-white: #F5F4F0;
@@ -21,6 +21,12 @@
 @layer base {
   body {
     @apply bg-warm-white text-charcoal antialiased;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    color-scheme: light;
   }
 }
 
@@ -40,4 +46,15 @@
 ::-webkit-scrollbar-thumb {
   background: #D0CEC8;
   border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
